@@ -10,7 +10,35 @@
  *       c if sel == 10
  *       d if sel == 11
  */
+ 
+ 
+ /*
+ table de vérité selM
+ entrées a, b
+ sortie selOut
+ 
+ b\a 0 1
+ 0   0 1
+ 1   0 1
 
+ 
+ selAB
+ 
+ b\a 0 1
+ 0   0 x
+ 1   1 x
+ 
+ selCD
+ 
+ b\a 0 1
+ 0   x 0
+ 1   x 1
+  
+  
+  /!\ ATTENTION /!\
+  les bus de chiffres binaires sont lus de droite à gauche
+  [0] = lsb
+*/
 
 CHIP Mux4Way16 {
 
@@ -20,5 +48,7 @@ CHIP Mux4Way16 {
     OUT out[16];
 
     PARTS:
-    // Put your code here.
+    Mux16(a=a, b=b, sel=sel[0], out=outab);
+    Mux16(a=c, b=d, sel=sel[0], out=outcd);
+    Mux16(a=outab, b=outcd, sel=sel[1], out=out);
 }
