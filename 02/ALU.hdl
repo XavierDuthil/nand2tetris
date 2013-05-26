@@ -17,7 +17,7 @@
  * The 6-bit combinations (zx,nx,zy,ny,f,no) and 
  * their effect are documented in the book. 
  */
-
+ 
 // Implementation: the ALU manipulates the x and y
 // inputs and then operates on the resulting values, 
 // as follows:
@@ -48,5 +48,31 @@ CHIP ALU {
         ng; // 1 if (out < 0),  0 otherwise
 
     PARTS:
-    // Put your code here.
+	// GESTION DE L'ENTREE X
+	// Condition ZX
+	Mux16(a=x, sel=zx, out=X1);
+	
+	// Condition NX
+	Not16(in=X1, out=nonX);
+	Mux16(a=X1, b=nonX, sel=nx, out=XFinal);
+	
+	// GESTION DE L'ENTREE Y
+	// Condition ZY
+	Mux16(a=y, sel=zy, out=Y1);
+	
+	// Condition NY
+	Not16(in=Y1, out=nonY);
+	Mux16(a=Y1, b=nonY, sel=ny, out=YFinal);
+	
+	// GESTION DU CALCUL
+	Add16(a=XFinal, b=YFinal, out=outAdd);
+	And16(a=XFinal, b=YFinal, out=outAnd);
+	Mux16(a=outAnd, b=outAdd, sel=f, out=outReel);
+	
+	// GESTION DU RESULTAT
+	Not16(in=outReel, out=nonOutReel);
+	Mux16(a=outReel, b=nonOutReel, sel=no, out=outFinal, out=out, out[15]=ng);
+	
+	// GESTION DES SORTIES SECONDAIRES
+	ZeroDetector16(in=outFinal, out=zr);
 }
