@@ -20,7 +20,7 @@ M=0     // Flush $R2 (résultat)
     @15
     D=M     // D = $R15
     @END
-    D;JLE   // if (D < 0) goto END (vérification de fin de boucle)
+    D;JLE   // if (D <= 0) goto END (vérification de fin de boucle)
 
     @0
 	D=M     // D = $R0 (on charge R0)
