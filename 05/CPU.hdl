@@ -22,6 +22,17 @@
  * to their new values only in the next time unit. If reset == 1, then the 
  * CPU jumps to address 0 (i.e. sets pc = 0 in next time unit) rather 
  * than to the address resulting from executing the current instruction. 
+ 
+	 The 16-bit word located in the CPU’s instruction input
+	can represent either an A-instruction or a C-instruction. In order to ?gure out what
+	this 16-bit word means, it can be broken into the ?elds ‘‘i xx a cccccc ddd jjj’’.
+	The i-bit codes the instruction type, which is 0 for an A-instruction and 1 for a Cinstruction.
+	In case of a C-instruction, the a-bit and the c-bits code the comp part,
+	the d-bits code the dest part, and the j-bits code the jump part of the instruction. In
+	case of an A-instruction, the 15 bits other than the i-bit should be interpreted as a
+	15-bit constant.
+	
+	A-instruction = @xxxxx (nombre sur 15bits)
  */
 
 CHIP CPU {
@@ -38,5 +49,46 @@ CHIP CPU {
         pc[15];          // ROM address (of next instruction)
 
      PARTS:
-    // Put your code here.
+	And(a=instruction[15], b=instruction[0], out=jgt);
+	And(a=instruction[15], b=instruction[1], out=jeq);
+	And(a=instruction[15], b=instruction[2], out=jlt);
+	
+	And(a=instruction[15], b=instruction[3], out=MReg);
+	And(a=instruction[15], b=instruction[4], out=DReg);
+	And(a=instruction[15], b=instruction[5], out=AReg);
+	
+	And(a=instruction[15], b=instruction[6], out=cno);
+	And(a=instruction[15], b=instruction[7], out=cf);
+	And(a=instruction[15], b=instruction[8], out=cny);
+	And(a=instruction[15], b=instruction[9], out=czy);
+	And(a=instruction[15], b=instruction[10], out=cnx);
+	And(a=instruction[15], b=instruction[11], out=czx);
+	
+	And(a=instruction[15], b=instruction[12], out=ALUSel);
+	 
+    Mux16(a=instruction, b=outALU, sel=instruction[15], out=inputA);
+	Not(in=instruction[15], out=isInstructionA);
+	Or(a=isInstructionA, b=AReg, out=readA);
+	ARegister(in=inputA, load=readA, out[0..14]=addressM, out=outA);
+	
+	DRegister(in=outALU, load=DReg, out=XinputALU);
+	
+	Mux16(a=outA, b=inM, sel=ALUSel, out=YinputALU);	// Pour c = 0, outA est utilisé
+	ALU(x=XinputALU, y=YinputALU, zx=czx, nx=cnx, zy=czy, ny=cny, f=cf, no=cno, out=outM, out=outALU, zr=outZR, ng=outNG);
+		
+	And(a=MReg, b=instruction[15], out=writeM);
+
+	And(a=jeq, b=outZR, out=isZero);
+	And(a=jlt, b=outNG, out=isLesserThanZero);
+	Not(in=outNG, out=notOutNG);
+	Not(in=outZR, out=isNotZero);
+	And(a=notOutNG, b=isNotZero, out=isGreaterThan0);
+	And(a=jgt, b=isGreaterThan0, out=isGreaterThanZero);
+	
+	Or(a=isZero, b=isLesserThanZero, out=outOr);
+	Or(a=outOr, b=isGreaterThanZero, out=loadPC);
+	
+	Not(in=loadPC, out=incPC);
+	
+	PC(in=outA, load=loadPC, inc=incPC, reset=reset, out[0..14]=pc);
 }
