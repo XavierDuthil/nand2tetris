@@ -1,10 +1,11 @@
 import argparse
-import re  # regular expressions module
+import re  # regular expressions
+import sys  # stdout
 
 def readArguments():
 	parser = argparse.ArgumentParser(description='Assemble a hack program.');
 	parser.add_argument('asm_file', type=str, help='the file to assemble');
-	parser.add_argument('-o', '--output', dest='hack_file', action='store',
+	parser.add_argument('-o', '--output', dest='output_file', action='store',
 	                   help='the output binary file');
 
 	return parser.parse_args();
@@ -123,12 +124,19 @@ def assembleProgram(asm_program):
 	return hackProgram;
 
 
-def writeHackProgram(hack_program):
-	print('\n'.join(hack_program));
+def writeHackProgram(hack_program, output_file):
+	hack_program = '\n'.join(hack_program);
+
+	if not output_file:
+		sys.stdout.write(hack_program);
+
+	else:
+		with open(output_file, 'w') as f:
+			f.write(hack_program);
 
 
 if __name__ == "__main__":
 	args = readArguments();
 	asm_program = readAsmProgram(args.asm_file);
 	hack_program = assembleProgram(asm_program);
-	writeHackProgram(hack_program);
+	writeHackProgram(hack_program, args.output_file);
