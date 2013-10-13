@@ -35,7 +35,7 @@ def assembleProgram(asm_program):
 			binaryInstruction = '0{:015b}'.format(address);  # format the 16-character instruction
 			hackProgram.append(binaryInstruction);  # adds the instruction to the output list
 
-		regExResult2 = re.match('^(\w)=(\w)$', line);
+		regExResult2 = re.match('^(\w+)=(.+)$', line);
 
 		# case: c-instruction
 		if regExResult2:
@@ -43,14 +43,16 @@ def assembleProgram(asm_program):
 			extractedComp = regExResult2.group(2);
 
 			# dest identification
-			if extractedDest == 'A':
-				dest = "100";
+			dest = list("000");
+			if 'A' in extractedDest:
+				dest[0] = '1';
 
-			elif extractedDest == 'D':
-				dest = "010";
+			if 'D' in extractedDest:
+				dest[1] = '1';
 
-			elif extractedDest == 'M':
-				dest = "010";
+			if 'M' in extractedDest:
+				dest[2] = '1';
+			dest = "".join(dest);
 
 			# comp identification
 			if 'M' in extractedComp:
@@ -58,10 +60,53 @@ def assembleProgram(asm_program):
 			else:
 				a = "0";
 
-			if extractedComp == "A":
+			# Replaces A or M by an X in extractedComp (same output instruction)
+			extractedComp = extractedComp.replace("A", "X");
+			extractedComp = extractedComp.replace("M", "X");
+
+			# All the cases
+			if extractedComp == "0":
+				c = "101010";
+			elif extractedComp == "1":
+				c = "111111";
+			elif extractedComp == "-1":
+				c = "111010";
+			elif extractedComp == "D":
+				c = "001100";
+			elif extractedComp == "X":
+				c = "110000";
+			elif extractedComp == "!D":
+				c = "001101";
+			elif extractedComp == "!X":
+				c = "110001";
+			elif extractedComp == "-D":
+				c = "001111";
+			elif extractedComp == "-X":
+				c = "110011";
+			elif extractedComp == "D+1":
+				c = "011111";
+			elif extractedComp == "X+1":
+				c = "110111";
+			elif extractedComp == "D-1":
+				c = "001110";
+			elif extractedComp == "X-1":
+				c = "110010";
+			elif extractedComp == "D+X":
+				c = "000010";
+			elif extractedComp == "D-X":
+				c = "010011";
+			elif extractedComp == "X-D":
+				c = "000111";
+			elif extractedComp == "D&X":
+				c = "000000";
+			elif extractedComp == "D|X":
+				c = "010101";
+			elif extractedComp == "X":
 				c = "110000";
 			elif extractedComp == "D":
 				c = "001100";
+			else:
+				raise Exception("Instruction %s non reconnue" % line)
 
 			comp = "{:s}{:s}".format(a,c);
 
