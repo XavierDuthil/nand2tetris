@@ -27,7 +27,7 @@ def assembleProgram(asm_program):
 
 	for line in asm_program:
 
-		regExResult1 = re.match('^@(\d+)$', line);
+		regExResult1 = re.match('^@(\d+)', line);
 
 		# case: a-instruction
 		if regExResult1:
@@ -36,8 +36,8 @@ def assembleProgram(asm_program):
 			binaryInstruction = '0{:015b}'.format(address);  # format the 16-character instruction
 			hackProgram.append(binaryInstruction);  # adds the instruction to the output list
 
-		regExResult2 = re.match('^(\w+)=(.+)$', line);
-		regExResult3 = re.match('^(.);(\w+)$', line);
+		regExResult2 = re.match('^(\w+)=([01ADM&!|+-]+)', line);
+		regExResult3 = re.match('^(.);(\w+)', line);
 
 		# case: c-instruction
 		if regExResult2:
@@ -101,6 +101,7 @@ def assembleProgram(asm_program):
 
 		if regExResult1 is None and regExResult2 is None and regExResult3 is None: 
 			hackProgram.append(line);
+			raise Exception("Could not assemble the instruction \"%s\"" % line);
 
 	return hackProgram;
 
