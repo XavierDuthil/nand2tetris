@@ -17,10 +17,39 @@ def readAsmProgram(asm_file):
 	asm_program = [];
 	for line in lines:
 		if not line.startswith("//") and len(line):
-			# asm_program contains the exploitable data
+			# asm_program contains the exploitable data, white spaces are stripped.
 			asm_program.append(line.strip());
 
 	return asm_program;
+
+def replaceLabels(asm_program):
+	labelFound = False;
+	lineNumber = 0;
+
+	for (index, line) in enumerate(asm_program):
+		labelMatch = re.match('^\((\w+)\)', line);
+
+		if labelMatch:
+			labelName = labelMatch.group(1);
+			lineNumber = index;
+			replaceLabel(labelName, lineNumber, asm_program);
+
+			labelFound = True;
+			break;
+
+	if labelFound:
+		asm_program.pop(lineNumber);
+		return replaceLabels(asm_program);
+
+	return asm_program;
+
+
+def replaceLabel(labelName, lineNumber, asm_program):
+	for (index, line) in enumerate(asm_program):
+		asm_program[index] = re.sub('^@' + labelName, '@%s' % lineNumber, line);
+
+	print("replaced : @%s by @%s" % (labelName, lineNumber));
+
 
 def assembleProgram(asm_program):
 	hackProgram = [];
@@ -38,6 +67,7 @@ def assembleProgram(asm_program):
 
 		regExResult2 = re.match('^(\w+)=([01ADM&!|+-]+)', line);
 		regExResult3 = re.match('^(.);(\w+)', line);
+
 
 		# case: c-instruction
 		if regExResult2:
@@ -181,5 +211,6 @@ def assembleCInstruction(comp, dest, jump):
 if __name__ == "__main__":
 	args = readArguments();
 	asm_program = readAsmProgram(args.asm_file);
+	asm_program = replaceLabels(asm_program);
 	hack_program = assembleProgram(asm_program);
 	writeHackProgram(hack_program, args.output_file);
