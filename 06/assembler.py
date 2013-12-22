@@ -27,7 +27,7 @@ def replaceLabels(asm_program):
 	lineNumber = 0;
 
 	for (index, line) in enumerate(asm_program):
-		labelMatch = re.match('^\((\w+)\)', line);
+		labelMatch = re.match('^\(([\w.$]+)\)', line);
 
 		if labelMatch:
 			labelName = labelMatch.group(1);
@@ -43,12 +43,23 @@ def replaceLabels(asm_program):
 
 	return asm_program;
 
+def replacePredefinedLabels(asm_program):
+	replaceLabel("SP", 0, asm_program);
+	replaceLabel("LCL", 1, asm_program); 
+	replaceLabel("ARG", 2, asm_program); 
+	replaceLabel("THIS", 3, asm_program);
+	replaceLabel("THAT", 4, asm_program);
+	replaceLabel("SCREEN", 16384, asm_program);
+	replaceLabel("KBD", 24576, asm_program);
 
-def replaceLabel(labelName, lineNumber, asm_program):
+	for i in range(0, 16):
+		replaceLabel("R%s" % i, i, asm_program);
+
+def replaceLabel(labelName, memoryAddress, asm_program):
 	for (index, line) in enumerate(asm_program):
-		asm_program[index] = re.sub('^@' + labelName, '@%s' % lineNumber, line);
+		asm_program[index] = re.sub('^@' + labelName, '@%s' % memoryAddress, line);
 
-	print("replaced : @%s by @%s" % (labelName, lineNumber));
+	print("replaced : @%s by @%s" % (labelName, memoryAddress));
 
 
 def assembleProgram(asm_program):
@@ -211,6 +222,7 @@ def assembleCInstruction(comp, dest, jump):
 if __name__ == "__main__":
 	args = readArguments();
 	asm_program = readAsmProgram(args.asm_file);
+	replacePredefinedLabels(asm_program);
 	asm_program = replaceLabels(asm_program);
 	hack_program = assembleProgram(asm_program);
 	writeHackProgram(hack_program, args.output_file);
