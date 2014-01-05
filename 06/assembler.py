@@ -22,6 +22,18 @@ def readAsmProgram(asm_file):
 
 	return asm_program;
 
+def replacePredefinedLabels(asm_program):
+	replaceLabel("SP", 0, asm_program);
+	replaceLabel("LCL", 1, asm_program); 
+	replaceLabel("ARG", 2, asm_program); 
+	replaceLabel("THIS", 3, asm_program);
+	replaceLabel("THAT", 4, asm_program);
+	replaceLabel("SCREEN", 16384, asm_program);
+	replaceLabel("KBD", 24576, asm_program);
+
+	for i in range(0, 16):
+		replaceLabel("R%s" % i, i, asm_program);
+
 def replaceLabels(asm_program):
 	labelFound = False;
 	lineNumber = 0;
@@ -43,17 +55,9 @@ def replaceLabels(asm_program):
 
 	return asm_program;
 
-def replacePredefinedLabels(asm_program):
-	replaceLabel("SP", 0, asm_program);
-	replaceLabel("LCL", 1, asm_program); 
-	replaceLabel("ARG", 2, asm_program); 
-	replaceLabel("THIS", 3, asm_program);
-	replaceLabel("THAT", 4, asm_program);
-	replaceLabel("SCREEN", 16384, asm_program);
-	replaceLabel("KBD", 24576, asm_program);
-
-	for i in range(0, 16):
-		replaceLabel("R%s" % i, i, asm_program);
+def replaceLabels2(asm_program):
+	labelsList = {};
+	asm_program2;
 
 def replaceLabel(labelName, memoryAddress, asm_program):
 	for (index, line) in enumerate(asm_program):
@@ -61,6 +65,22 @@ def replaceLabel(labelName, memoryAddress, asm_program):
 
 	print("replaced : @%s by @%s" % (labelName, memoryAddress));
 
+def replaceVariables(asm_program):
+	variables = {};
+	memoryAddress = 16;
+
+	for line in asm_program:
+		regExResult = re.match('^@([^\d].*)', line);
+
+		if regExResult:
+			variableName = regExResult.group(1);
+			
+			if regExResult.group(1) not in variables:
+				variables[variableName] = memoryAddress;
+				memoryAddress += 1;
+
+	for variableName, memoryAddress in variables.items():
+		replaceLabel(variableName, memoryAddress, asm_program);
 
 def assembleProgram(asm_program):
 	hackProgram = [];
@@ -224,5 +244,6 @@ if __name__ == "__main__":
 	asm_program = readAsmProgram(args.asm_file);
 	replacePredefinedLabels(asm_program);
 	asm_program = replaceLabels(asm_program);
+	replaceVariables(asm_program);
 	hack_program = assembleProgram(asm_program);
 	writeHackProgram(hack_program, args.output_file);
