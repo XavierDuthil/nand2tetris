@@ -60,6 +60,9 @@ def replaceLabels2(asm_program):
 	asm_program2;
 
 def replaceLabel(labelName, memoryAddress, asm_program):
+	if memoryAddress > 33000:
+		raise Exception("%s %s" % (labelName, memoryAddress));
+
 	for (index, line) in enumerate(asm_program):
 		asm_program[index] = re.sub('^@' + labelName, '@%s' % memoryAddress, line);
 
@@ -163,6 +166,9 @@ def assembleProgram(asm_program):
 		if regExResult1 is None and regExResult2 is None and regExResult3 is None: 
 			hackProgram.append(line);
 			raise Exception("Could not assemble the instruction \"%s\"" % line);
+
+		if len(hackProgram[-1]) > 16:
+			raise Exception(line);
 
 	return hackProgram;
 
