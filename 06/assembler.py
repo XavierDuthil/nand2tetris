@@ -17,8 +17,13 @@ def readAsmProgram(asm_file):
 	asm_program = [];
 	for line in lines:
 		if not line.startswith("//") and len(line):
+			newLine = line;
+
+			if "//" in line:
+				newLine = re.sub('//.*', '', line);
+
 			# asm_program contains the exploitable data, white spaces are stripped.
-			asm_program.append(line.strip());
+			asm_program.append(newLine.strip());
 
 	return asm_program;
 
@@ -55,16 +60,16 @@ def replaceLabels(asm_program):
 
 	return asm_program;
 
-def replaceLabels2(asm_program):
-	labelsList = {};
-	asm_program2;
+# def replaceLabels2(asm_program):
+# 	labelsList = {};
+# 	asm_program2;
 
 def replaceLabel(labelName, memoryAddress, asm_program):
 	if memoryAddress > 33000:
 		raise Exception("%s %s" % (labelName, memoryAddress));
 
 	for (index, line) in enumerate(asm_program):
-		asm_program[index] = re.sub('^@' + labelName, '@%s' % memoryAddress, line);
+		asm_program[index] = re.sub('^@' + re.escape(labelName) +'$', '@%s' % memoryAddress, line);
 
 	print("replaced : @%s by @%s" % (labelName, memoryAddress));
 
@@ -251,5 +256,8 @@ if __name__ == "__main__":
 	replacePredefinedLabels(asm_program);
 	asm_program = replaceLabels(asm_program);
 	replaceVariables(asm_program);
-	hack_program = assembleProgram(asm_program);
+	try:
+		hack_program = assembleProgram(asm_program);
+	except Exception as e:
+		print e;
 	writeHackProgram(hack_program, args.output_file);
