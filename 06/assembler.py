@@ -39,30 +39,41 @@ def replacePredefinedLabels(asm_program):
 	for i in range(0, 16):
 		replaceLabel("R%s" % i, i, asm_program);
 
-def replaceLabels(asm_program):
-	labelFound = False;
-	lineNumber = 0;
+def searchLabels():
+	labelsList = {};
 
 	for (index, line) in enumerate(asm_program):
-		labelMatch = re.match('^\(([\w.$]+)\)', line);
+		labelName = extractLabelDefinition(line);
+		if labelName is not None:
+			labelsList[labelName] = index - len(labelsList);
 
-		if labelMatch:
-			labelName = labelMatch.group(1);
-			lineNumber = index;
-			replaceLabel(labelName, lineNumber, asm_program);
+	print("Labels searched.")
 
-			labelFound = True;
-			break;
+	return labelsList;
 
-	if labelFound:
-		asm_program.pop(lineNumber);
-		return replaceLabels(asm_program);
+def replaceLabels(asm_program):
+	labelsList = searchLabels();
+	asm_program2 = [];
 
-	return asm_program;
+	for line in asm_program:
+		if not isLabelDefinition(line):
+			asm_program2.append(replaceOnlyAInstruction(labelsList, line));
 
-# def replaceLabels2(asm_program):
-# 	labelsList = {};
-# 	asm_program2;
+	return asm_program2;
+
+# Renvoie une instruction A avec label remplacé (ou bien la ligne originale)
+def replaceOnlyAInstruction(labelsList, line):
+	labelName = extractLabelName(line);
+
+	if labelName is not None and labelName in labelsList:
+		line = "@" + str(labelsList[labelName]);
+
+	return line;
+
+# renvoie true si la ligne est une définition de label
+def isLabelDefinition(line):
+	regExResult = re.match('\([\w.$]+\)', line);
+	return regExResult is not None;
 
 def replaceLabel(labelName, memoryAddress, asm_program):
 	if memoryAddress > 33000:
@@ -78,17 +89,28 @@ def replaceVariables(asm_program):
 	memoryAddress = 16;
 
 	for line in asm_program:
-		regExResult = re.match('^@([^\d].*)', line);
+		variableName = extractLabelName(line);
 
-		if regExResult:
-			variableName = regExResult.group(1);
-			
-			if regExResult.group(1) not in variables:
-				variables[variableName] = memoryAddress;
-				memoryAddress += 1;
+		if variableName is not None and variableName not in variables:
+			variables[variableName] = memoryAddress;
+			memoryAddress += 1;
 
 	for variableName, memoryAddress in variables.items():
 		replaceLabel(variableName, memoryAddress, asm_program);
+
+def extractLabelName(line):
+	regExResult = re.match('^@([^\d].*)', line);
+	if regExResult:
+		return regExResult.group(1);
+
+	return None;
+
+def extractLabelDefinition(line):
+	regExResult = re.match('\(([\w.$]+)\)', line);
+	if regExResult:
+		return regExResult.group(1);
+
+	return None;
 
 def assembleProgram(asm_program):
 	hackProgram = [];
@@ -259,5 +281,5 @@ if __name__ == "__main__":
 	try:
 		hack_program = assembleProgram(asm_program);
 	except Exception as e:
-		print e;
+		print(e);
 	writeHackProgram(hack_program, args.output_file);
