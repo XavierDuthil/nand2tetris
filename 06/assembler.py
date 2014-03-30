@@ -27,17 +27,20 @@ def readAsmProgram(asm_file):
 
 	return asm_program;
 
-def replacePredefinedLabels(asm_program):
-	replaceLabel("SP", 0, asm_program);
-	replaceLabel("LCL", 1, asm_program); 
-	replaceLabel("ARG", 2, asm_program); 
-	replaceLabel("THIS", 3, asm_program);
-	replaceLabel("THAT", 4, asm_program);
-	replaceLabel("SCREEN", 16384, asm_program);
-	replaceLabel("KBD", 24576, asm_program);
+def predefinedLabels():
+	labelsList = {};
+	labelsList["SP"] = 0;
+	labelsList["LCL"] = 1; 
+	labelsList["ARG"] = 2; 
+	labelsList["THIS"] = 3;
+	labelsList["THAT"] = 4;
+	labelsList["SCREEN"] = 16384;
+	labelsList["KBD"] = 24576;
 
 	for i in range(0, 16):
-		replaceLabel("R%s" % i, i, asm_program);
+		labelsList["R%s" % i] = i;
+
+	return labelsList;
 
 def searchLabels():
 	labelsList = {};
@@ -47,12 +50,13 @@ def searchLabels():
 		if labelName is not None:
 			labelsList[labelName] = index - len(labelsList);
 
-	print("Labels searched.")
+	print("Labels searched.");
 
 	return labelsList;
 
 def replaceLabels(asm_program):
 	labelsList = searchLabels();
+	labelsList.update(predefinedLabels());
 	asm_program2 = [];
 
 	for line in asm_program:
@@ -275,7 +279,6 @@ def assembleCInstruction(comp, dest, jump):
 if __name__ == "__main__":
 	args = readArguments();
 	asm_program = readAsmProgram(args.asm_file);
-	replacePredefinedLabels(asm_program);
 	asm_program = replaceLabels(asm_program);
 	replaceVariables(asm_program);
 	try:
