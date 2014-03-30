@@ -1,6 +1,14 @@
 import argparse
 import re  # regular expressions
 import sys  # stdout
+import time
+
+STARTING_MEMORY_ADDRESS = 16;
+REG_EX_LABEL = re.compile('^@([^\d].*)');
+REG_EX_LABEL_DEFINITION = re.compile('\(([\w.$]+)\)');
+REG_EX_A_INSTRUCTION = re.compile('^@(\d+)');
+REG_EX_C_INSTRUCTION = re.compile('^(\w+)=([01ADM&!|+-]+)');
+REG_EX_JUMP_INSTRUCTION = re.compile('^(.);(\w+)');
 
 def readArguments():
 	parser = argparse.ArgumentParser(description='Assemble a hack program.');
@@ -42,7 +50,7 @@ def predefinedLabels():
 
 	return labelsList;
 
-def searchLabels():
+def searchLabels(asm_program):
 	labelsList = {};
 
 	for (index, line) in enumerate(asm_program):
@@ -54,9 +62,25 @@ def searchLabels():
 
 	return labelsList;
 
+def searchVariables(asm_program, labelsList):
+	variables = {};
+	memoryAddress = STARTING_MEMORY_ADDRESS;
+
+	for line in asm_program:
+		variableName = extractLabelName(line);
+
+		if (variableName is not None
+		and variableName not in variables 
+		and variableName not in labelsList):
+			variables[variableName] = memoryAddress;
+			memoryAddress += 1;
+
+	return variables;
+
 def replaceLabels(asm_program):
-	labelsList = searchLabels();
+	labelsList = searchLabels(asm_program);
 	labelsList.update(predefinedLabels());
+	labelsList.update(searchVariables(asm_program, labelsList));
 	asm_program2 = [];
 
 	for line in asm_program:
@@ -79,38 +103,26 @@ def isLabelDefinition(line):
 	regExResult = re.match('\([\w.$]+\)', line);
 	return regExResult is not None;
 
-def replaceLabel(labelName, memoryAddress, asm_program):
-	if memoryAddress > 33000:
-		raise Exception("%s %s" % (labelName, memoryAddress));
+# def replaceLabel(labelName, memoryAddress, asm_program):
+# 	if memoryAddress > 33000:
+# 		raise Exception("%s %s" % (labelName, memoryAddress));
 
-	for (index, line) in enumerate(asm_program):
-		asm_program[index] = re.sub('^@' + re.escape(labelName) +'$', '@%s' % memoryAddress, line);
+# 	for (index, line) in enumerate(asm_program):
+# 		asm_program[index] = re.sub('^@' + re.escape(labelName) +'$', '@%s' % memoryAddress, line);
 
-	print("replaced : @%s by @%s" % (labelName, memoryAddress));
+# 	print("replaced : @%s by @%s" % (labelName, memoryAddress));
 
-def replaceVariables(asm_program):
-	variables = {};
-	memoryAddress = 16;
 
-	for line in asm_program:
-		variableName = extractLabelName(line);
-
-		if variableName is not None and variableName not in variables:
-			variables[variableName] = memoryAddress;
-			memoryAddress += 1;
-
-	for variableName, memoryAddress in variables.items():
-		replaceLabel(variableName, memoryAddress, asm_program);
 
 def extractLabelName(line):
-	regExResult = re.match('^@([^\d].*)', line);
+	regExResult = REG_EX_LABEL.match(line);
 	if regExResult:
 		return regExResult.group(1);
 
 	return None;
 
 def extractLabelDefinition(line):
-	regExResult = re.match('\(([\w.$]+)\)', line);
+	regExResult = REG_EX_LABEL_DEFINITION.match(line);
 	if regExResult:
 		return regExResult.group(1);
 
@@ -121,7 +133,7 @@ def assembleProgram(asm_program):
 
 	for line in asm_program:
 
-		regExResult1 = re.match('^@(\d+)', line);
+		regExResult1 = REG_EX_A_INSTRUCTION.match(line);
 
 		# case: a-instruction
 		if regExResult1:
@@ -130,8 +142,8 @@ def assembleProgram(asm_program):
 			binaryInstruction = '0{:015b}'.format(address);  # format the 16-character instruction
 			hackProgram.append(binaryInstruction);  # adds the instruction to the output list
 
-		regExResult2 = re.match('^(\w+)=([01ADM&!|+-]+)', line);
-		regExResult3 = re.match('^(.);(\w+)', line);
+		regExResult2 = REG_EX_C_INSTRUCTION.match(line);
+		regExResult3 = REG_EX_JUMP_INSTRUCTION.match(line);
 
 
 		# case: c-instruction
@@ -276,13 +288,17 @@ def assembleComp(extractedComp):
 def assembleCInstruction(comp, dest, jump):
 	return "111{:s}{:s}{:s}".format(comp, dest, jump);
 
-if __name__ == "__main__":
+def main():
 	args = readArguments();
 	asm_program = readAsmProgram(args.asm_file);
 	asm_program = replaceLabels(asm_program);
-	replaceVariables(asm_program);
 	try:
 		hack_program = assembleProgram(asm_program);
 	except Exception as e:
 		print(e);
 	writeHackProgram(hack_program, args.output_file);
+
+if __name__ == "__main__":
+	time1 = time.time();
+	main();
+	print(time.time() - time1);
