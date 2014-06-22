@@ -45,6 +45,11 @@ def translate(vmProgram):
 		if firstWord == "push":
 			translatePushCommand(outputProgram, line);
 
+		if firstWord == "add":
+			translateAddCommand(outputProgram, line);
+
+		if firstWord == "eq":
+			translateEqCommand(outputProgram, line);
 
 
 	return outputProgram;
@@ -52,7 +57,6 @@ def translate(vmProgram):
 
 def translatePushCommand(outputProgram, line):
 	secondWord = REGEX_SECOND_WORD.match(line).group(1);
-
 	value = REGEX_PUSH_VALUE.match(line).group(1);
 
 	if secondWord == "constant":
@@ -65,10 +69,57 @@ def translatePushCommand(outputProgram, line):
 		outputProgram.append("A=M");
 		outputProgram.append("M=D");
 
-	# Increment the value of stackPointer
-	outputProgram.append("@SP");
-	outputProgram.append("M=M+1");
+	outputProgram += incrementStackPointer();
 
+
+def translateAddCommand(outputProgram, line):
+	# Read value at the previous pointed address and store it in D
+	outputProgram += decrementStackPointer();
+	outputProgram.append("A=M");
+	outputProgram.append("D=M");
+	
+	# Add previous value to this one
+	outputProgram += decrementStackPointer();
+	outputProgram.append("A=M");
+	outputProgram.append("M=M+D");
+
+	outputProgram += incrementStackPointer();
+
+def translateEqCommand(outputProgram, line):
+	outputProgram += decrementStackPointer();
+	outputProgram.append("A=M");
+	outputProgram.append("D=M");
+
+	# Substract previous value to this one and store result into D
+	outputProgram += decrementStackPointer();
+	outputProgram.append("A=M");
+	outputProgram.append("D=M-D");
+
+	outputProgram.append("@{value}".format(value=len(outputProgram) + 5));
+	outputProgram.append("D;JEQ");
+
+	# Else :
+	outputProgram.append("D=0");
+	outputProgram.append("@{value}".format(value=len(outputProgram) + 3));
+	outputProgram.append("0;JMP");
+
+	# If :
+	outputProgram.append("D=-1");
+
+	outputProgram+=pushD();
+
+def incrementStackPointer():
+	return ["@SP", "M=M+1"];
+
+def decrementStackPointer():
+	return ["@SP", "M=M-1"];
+
+def pushD():
+	return [
+		"@SP",
+		"A=M",
+		"M=D"
+	];
 
 def writeHackProgram(outputProgram, output_file):
 	outputString = '\n'.join(outputProgram);
