@@ -21,3 +21,19 @@ D=M
 M=D
 @14
 0;JMP
+
+
+@00
+chiffres
+chiffres
+@line+5
+;JEQ
+	D=0
+	@line+3
+	0;JMP
+	D=-1
+@SP
+A=M
+M=D
+
+	

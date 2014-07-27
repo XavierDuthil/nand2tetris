@@ -51,6 +51,12 @@ def translate(vmProgram):
 		if firstWord == "eq":
 			translateEqCommand(outputProgram, line);
 
+		if firstWord == "lt":
+			translateLtCommand(outputProgram, line);
+
+		if firstWord == "gt":
+			translateGtCommand(outputProgram, line);
+
 
 	return outputProgram;
 
@@ -85,28 +91,47 @@ def translateAddCommand(outputProgram, line):
 
 	outputProgram += incrementStackPointer();
 
+
+def comparison(func):
+	def newFunc(outputProgram, line):
+		outputProgram += decrementStackPointer();
+		outputProgram.append("A=M");
+		outputProgram.append("D=M");
+
+		# Substract previous value to this one and store result into D
+		outputProgram += decrementStackPointer();
+		outputProgram.append("A=M");
+		outputProgram.append("D=M-D");
+
+		outputProgram.append("@{value}".format(value=len(outputProgram) + 5));
+
+		# Execute the decorated function
+		func(outputProgram, line);
+
+		# Else :
+		outputProgram.append("D=0");
+		outputProgram.append("@{value}".format(value=len(outputProgram) + 3));
+		outputProgram.append("0;JMP");
+
+		# If :
+		outputProgram.append("D=-1");
+
+		outputProgram+=pushD();
+	return newFunc;
+
+# Decorate the function (execute code before and after)
+@comparison
 def translateEqCommand(outputProgram, line):
-	outputProgram += decrementStackPointer();
-	outputProgram.append("A=M");
-	outputProgram.append("D=M");
-
-	# Substract previous value to this one and store result into D
-	outputProgram += decrementStackPointer();
-	outputProgram.append("A=M");
-	outputProgram.append("D=M-D");
-
-	outputProgram.append("@{value}".format(value=len(outputProgram) + 5));
 	outputProgram.append("D;JEQ");
 
-	# Else :
-	outputProgram.append("D=0");
-	outputProgram.append("@{value}".format(value=len(outputProgram) + 3));
-	outputProgram.append("0;JMP");
+@comparison
+def translateLtCommand(outputProgram, line):
+	outputProgram.append("D;JLT");
 
-	# If :
-	outputProgram.append("D=-1");
+@comparison
+def translateGtCommand(outputProgram, line):
+	outputProgram.append("D;JGT");
 
-	outputProgram+=pushD();
 
 def incrementStackPointer():
 	return ["@SP", "M=M+1"];
