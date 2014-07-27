@@ -118,8 +118,8 @@ def pushD():
 	return [
 		"@SP",
 		"A=M",
-		"M=D"
-	];
+		"M=D",
+	] + incrementStackPointer();
 
 def writeHackProgram(outputProgram, output_file):
 	outputString = '\n'.join(outputProgram);
