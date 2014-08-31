@@ -57,6 +57,18 @@ def translate(vmProgram):
 		if firstWord == "gt":
 			translateGtCommand(outputProgram, line);
 
+		if firstWord == "sub":
+			translateSubCommand(outputProgram, line);
+		
+		if firstWord == "neg":
+			translateNegCommand(outputProgram, line);
+
+		if firstWord == "and":
+			translateAndCommand(outputProgram, line);
+
+		if firstWord == "or":
+			translateOrCommand(outputProgram, line);
+
 
 	return outputProgram;
 
@@ -77,19 +89,47 @@ def translatePushCommand(outputProgram, line):
 
 	outputProgram += incrementStackPointer();
 
-
-def translateAddCommand(outputProgram, line):
+def translateNegCommand(outputProgram, line):
 	# Read value at the previous pointed address and store it in D
 	outputProgram += decrementStackPointer();
 	outputProgram.append("A=M");
-	outputProgram.append("D=M");
-	
-	# Add previous value to this one
-	outputProgram += decrementStackPointer();
-	outputProgram.append("A=M");
+	outputProgram.append("M=-M");
+	outputProgram += incrementStackPointer();
+
+def operation(func):
+	def newFunc(outputProgram, line):
+		# Read value at the previous pointed address and store it in D
+		outputProgram += decrementStackPointer();
+		outputProgram.append("A=M");
+		outputProgram.append("D=M");
+		
+		# Load value into M
+		outputProgram += decrementStackPointer();
+		outputProgram.append("A=M");
+
+		# Apply the operation
+		func(outputProgram, line);
+
+		outputProgram += incrementStackPointer();
+	return newFunc;
+
+# Decorate the function (execute code before and after)
+@operation
+def translateAddCommand(outputProgram, line):
 	outputProgram.append("M=M+D");
 
-	outputProgram += incrementStackPointer();
+@operation
+def translateSubCommand(outputProgram, line):
+	outputProgram.append("M=M-D");
+
+@operation
+def translateAndCommand(outputProgram, line):
+	outputProgram.append("M=M&D");
+
+@operation
+def translateOrCommand(outputProgram, line):
+	outputProgram.append("M=M|D");
+	
 
 
 def comparison(func):
@@ -119,7 +159,6 @@ def comparison(func):
 		outputProgram+=pushD();
 	return newFunc;
 
-# Decorate the function (execute code before and after)
 @comparison
 def translateEqCommand(outputProgram, line):
 	outputProgram.append("D;JEQ");
