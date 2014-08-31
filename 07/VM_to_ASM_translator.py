@@ -6,6 +6,13 @@ import time
 REGEX_FIRST_WORD = re.compile('^([^ ]*)');
 REGEX_SECOND_WORD = re.compile('^[^ ]* ([^ ]*)');
 REGEX_THIRD_WORD = re.compile('^[^ ]* [^ ]* ([^ ]*)');
+TEMP0 = 5;
+SEGMENTS = {
+	"local": 	"LCL",
+	"argument":	"ARG",
+	"this":		"THIS",
+	"that":		"THAT",
+};
 
 def readArguments():
 	parser = argparse.ArgumentParser(description='Translate VM code to Hack code.');
@@ -76,12 +83,12 @@ def translate(vmProgram):
 
 
 def translatePushCommand(outputProgram, line):
-	secondWord = REGEX_SECOND_WORD.match(line).group(1);
-	value = REGEX_THIRD_WORD.match(line).group(1);
+	segmentName = REGEX_SECOND_WORD.match(line).group(1);
+	thirdWord = REGEX_THIRD_WORD.match(line).group(1);
 
-	if secondWord == "constant":
+	if segmentName == "constant":	# constant = stack segment
 		# Read value and put it in D
-		outputProgram.append("@{value}".format(value=value));
+		outputProgram.append("@{value}".format(value=thirdWord));
 		outputProgram.append("D=A");
 
 		# Put value at the adress indicated by the stackPointer
@@ -89,27 +96,47 @@ def translatePushCommand(outputProgram, line):
 		outputProgram.append("A=M");
 		outputProgram.append("M=D");
 
+	else:
+		if segmentName == "temp":
+			address = int(thirdWord) + TEMP0;
+			outputProgram.append("@{address}".format(address=address));
+			outputProgram.append("D=A");
+
+		else:
+			segmentStart = SEGMENTS[segmentName];
+			# Compute the source address and store it in D
+			outputProgram.append("@{segmentStart}".format(segmentStart=segmentStart));
+			outputProgram.append("D=M");
+			outputProgram.append("@{address}".format(address=thirdWord));
+			outputProgram.append("D=D+A");
+
+		# Store the value from the source in D
+		outputProgram.append("A=D");
+		outputProgram.append("D=M");
+
+		# Push value on the stack
+		outputProgram.append("@SP");
+		outputProgram.append("A=M");
+		outputProgram.append("M=D");
 
 	outputProgram += incrementStackPointer();
 
 def translatePopCommand(outputProgram, line):
 	segmentName = REGEX_SECOND_WORD.match(line).group(1);
 	address = REGEX_THIRD_WORD.match(line).group(1);
-	segments = {
-		"local": 	"LCL",
-		"argument":	"ARG",
-		"this":		"THIS",
-		"that":		"THAT",
-		"temp":		"5"
-	};
-
-	segmentStart = segments[segmentName];
 	
-	# Compute the destination address
-	outputProgram.append("@{segmentStart}".format(segmentStart=segmentStart));
-	outputProgram.append("D=M");
-	outputProgram.append("@{address}".format(address=address));
-	outputProgram.append("D=D+A");
+	if segmentName == "temp":
+		address = int(address) + TEMP0;
+		outputProgram.append("@{address}".format(address=address));
+		outputProgram.append("D=A");
+
+	else:
+		segmentStart = SEGMENTS[segmentName];
+		# Compute the destination address
+		outputProgram.append("@{segmentStart}".format(segmentStart=segmentStart));
+		outputProgram.append("D=M");
+		outputProgram.append("@{address}".format(address=address));
+		outputProgram.append("D=D+A");
 
 	# Push value of the destination address (place to pop to) on stack
 	outputProgram.append("@SP");
@@ -122,8 +149,8 @@ def translatePopCommand(outputProgram, line):
 	outputProgram.append("A=M");
 	outputProgram.append("D=M");
 
-	outputProgram += incrementStackPointer();
 	# Put the value at the address
+	outputProgram += incrementStackPointer();
 	outputProgram.append("@SP");
 	outputProgram.append("A=M");
 	outputProgram.append("A=M");
