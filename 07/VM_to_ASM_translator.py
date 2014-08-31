@@ -5,8 +5,7 @@ import time
 
 REGEX_FIRST_WORD = re.compile('^([^ ]*)');
 REGEX_SECOND_WORD = re.compile('^[^ ]* ([^ ]*)');
-REGEX_PUSH_VALUE = re.compile('^[^ ]* [^ ]* (\d*)');
-STACK_POINTER = 0;
+REGEX_THIRD_WORD = re.compile('^[^ ]* [^ ]* ([^ ]*)');
 
 def readArguments():
 	parser = argparse.ArgumentParser(description='Translate VM code to Hack code.');
@@ -45,28 +44,31 @@ def translate(vmProgram):
 		if firstWord == "push":
 			translatePushCommand(outputProgram, line);
 
-		if firstWord == "add":
+		elif firstWord == "pop":
+			translatePopCommand(outputProgram, line);
+
+		elif firstWord == "add":
 			translateAddCommand(outputProgram, line);
 
-		if firstWord == "eq":
+		elif firstWord == "eq":
 			translateEqCommand(outputProgram, line);
 
-		if firstWord == "lt":
+		elif firstWord == "lt":
 			translateLtCommand(outputProgram, line);
 
-		if firstWord == "gt":
+		elif firstWord == "gt":
 			translateGtCommand(outputProgram, line);
 
-		if firstWord == "sub":
+		elif firstWord == "sub":
 			translateSubCommand(outputProgram, line);
 		
-		if firstWord == "neg":
+		elif firstWord == "neg":
 			translateNegCommand(outputProgram, line);
 
-		if firstWord == "and":
+		elif firstWord == "and":
 			translateAndCommand(outputProgram, line);
 
-		if firstWord == "or":
+		elif firstWord == "or":
 			translateOrCommand(outputProgram, line);
 
 
@@ -75,7 +77,7 @@ def translate(vmProgram):
 
 def translatePushCommand(outputProgram, line):
 	secondWord = REGEX_SECOND_WORD.match(line).group(1);
-	value = REGEX_PUSH_VALUE.match(line).group(1);
+	value = REGEX_THIRD_WORD.match(line).group(1);
 
 	if secondWord == "constant":
 		# Read value and put it in D
@@ -87,7 +89,47 @@ def translatePushCommand(outputProgram, line):
 		outputProgram.append("A=M");
 		outputProgram.append("M=D");
 
+
 	outputProgram += incrementStackPointer();
+
+def translatePopCommand(outputProgram, line):
+	segmentName = REGEX_SECOND_WORD.match(line).group(1);
+	address = REGEX_THIRD_WORD.match(line).group(1);
+	segments = {
+		"local": 	"LCL",
+		"argument":	"ARG",
+		"this":		"THIS",
+		"that":		"THAT",
+		"temp":		"5"
+	};
+
+	segmentStart = segments[segmentName];
+	
+	# Compute the destination address
+	outputProgram.append("@{segmentStart}".format(segmentStart=segmentStart));
+	outputProgram.append("D=M");
+	outputProgram.append("@{address}".format(address=address));
+	outputProgram.append("D=D+A");
+
+	# Push value of the destination address (place to pop to) on stack
+	outputProgram.append("@SP");
+	outputProgram.append("A=M");
+	outputProgram.append("M=D");	
+
+	# Store value to pop in D
+	outputProgram += decrementStackPointer();
+	outputProgram.append("@SP");
+	outputProgram.append("A=M");
+	outputProgram.append("D=M");
+
+	outputProgram += incrementStackPointer();
+	# Put the value at the address
+	outputProgram.append("@SP");
+	outputProgram.append("A=M");
+	outputProgram.append("A=M");
+	outputProgram.append("M=D");	# Place the value at the address of the specified segment
+	
+	outputProgram += decrementStackPointer();
 
 def translateNegCommand(outputProgram, line):
 	# Read value at the previous pointed address and store it in D
@@ -129,7 +171,7 @@ def translateAndCommand(outputProgram, line):
 @operation
 def translateOrCommand(outputProgram, line):
 	outputProgram.append("M=M|D");
-	
+
 
 
 def comparison(func):
