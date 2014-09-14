@@ -6,14 +6,19 @@ import time
 REGEX_FIRST_WORD = re.compile('^([^ ]*)');
 REGEX_SECOND_WORD = re.compile('^[^ ]* ([^ ]*)');
 REGEX_THIRD_WORD = re.compile('^[^ ]* [^ ]* ([^ ]*)');
-TEMP0 = 5;
-STATIC_START = 16;
-SEGMENTS = {
+
+SEGMENTS_POINTER = {
 	"local": 	"LCL",
 	"argument":	"ARG",
 	"this":		"THIS",
 	"that":		"THAT",
 };
+SEGMENTS_OFFSET = {
+	"temp":		0,
+	"static":	16,
+	"pointer": 	3,
+};
+
 
 def readArguments():
 	parser = argparse.ArgumentParser(description='Translate VM code to Hack code.');
@@ -99,23 +104,7 @@ def translatePushCommand(outputProgram, line):
 
 	else:
 		addressInSegment = int(thirdWord);
-		if segmentName == "temp":
-			address = addressInSegment + TEMP0;
-			outputProgram.append("@{address}".format(address=address));
-			outputProgram.append("D=A");
-
-		elif segmentName == "static":
-			address = addressInSegment + STATIC_START;
-			outputProgram.append("@{address}".format(address=address));
-			outputProgram.append("D=A");
-
-		else:
-			segmentStart = SEGMENTS[segmentName];
-			# Compute the source address and store it in D
-			outputProgram.append("@{segmentStart}".format(segmentStart=segmentStart));
-			outputProgram.append("D=M");
-			outputProgram.append("@{address}".format(address=addressInSegment));
-			outputProgram.append("D=D+A");
+		loadAbsoluteAddressIntoD(outputProgram, segmentName, addressInSegment);
 
 		# Store the value from the source in D
 		outputProgram.append("A=D");
@@ -128,27 +117,11 @@ def translatePushCommand(outputProgram, line):
 
 	outputProgram += incrementStackPointer();
 
+
 def translatePopCommand(outputProgram, line):
 	segmentName = REGEX_SECOND_WORD.match(line).group(1);
-	address = REGEX_THIRD_WORD.match(line).group(1);
-	
-	if segmentName == "temp":
-		address = int(address) + TEMP0;
-		outputProgram.append("@{address}".format(address=address));
-		outputProgram.append("D=A");
-
-	elif segmentName == "static":
-		address = int(address) + STATIC_START;
-		outputProgram.append("@{address}".format(address=address));
-		outputProgram.append("D=A");
-
-	else:
-		segmentStart = SEGMENTS[segmentName];
-		# Compute the destination address
-		outputProgram.append("@{segmentStart}".format(segmentStart=segmentStart));
-		outputProgram.append("D=M");
-		outputProgram.append("@{address}".format(address=address));
-		outputProgram.append("D=D+A");
+	addressInSegment = int(REGEX_THIRD_WORD.match(line).group(1));
+	loadAbsoluteAddressIntoD(outputProgram, segmentName, addressInSegment);
 
 	# Push value of the destination address (place to pop to) on stack
 	outputProgram.append("@SP");
@@ -169,6 +142,21 @@ def translatePopCommand(outputProgram, line):
 	outputProgram.append("M=D");	# Place the value at the address of the specified segment
 	
 	outputProgram += decrementStackPointer();
+
+
+def loadAbsoluteAddressIntoD(outputProgram, segmentName, addressInSegment):
+	if segmentName in SEGMENTS_OFFSET :
+		address = int(addressInSegment) + SEGMENTS_OFFSET[segmentName];
+		outputProgram.append("@{address}".format(address=address));
+		outputProgram.append("D=A");
+
+	else:
+		segmentPointer = SEGMENTS_POINTER[segmentName];
+		# Compute the destination address
+		outputProgram.append("@{segmentPointer}".format(segmentPointer=segmentPointer));
+		outputProgram.append("D=M");
+		outputProgram.append("@{address}".format(address=addressInSegment));
+		outputProgram.append("D=D+A");
 
 def translateNegCommand(outputProgram, line):
 	# Read value at the previous pointed address and store it in D
