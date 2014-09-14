@@ -7,6 +7,7 @@ REGEX_FIRST_WORD = re.compile('^([^ ]*)');
 REGEX_SECOND_WORD = re.compile('^[^ ]* ([^ ]*)');
 REGEX_THIRD_WORD = re.compile('^[^ ]* [^ ]* ([^ ]*)');
 TEMP0 = 5;
+STATIC_START = 16;
 SEGMENTS = {
 	"local": 	"LCL",
 	"argument":	"ARG",
@@ -97,8 +98,14 @@ def translatePushCommand(outputProgram, line):
 		outputProgram.append("M=D");
 
 	else:
+		addressInSegment = int(thirdWord);
 		if segmentName == "temp":
-			address = int(thirdWord) + TEMP0;
+			address = addressInSegment + TEMP0;
+			outputProgram.append("@{address}".format(address=address));
+			outputProgram.append("D=A");
+
+		elif segmentName == "static":
+			address = addressInSegment + STATIC_START;
 			outputProgram.append("@{address}".format(address=address));
 			outputProgram.append("D=A");
 
@@ -107,7 +114,7 @@ def translatePushCommand(outputProgram, line):
 			# Compute the source address and store it in D
 			outputProgram.append("@{segmentStart}".format(segmentStart=segmentStart));
 			outputProgram.append("D=M");
-			outputProgram.append("@{address}".format(address=thirdWord));
+			outputProgram.append("@{address}".format(address=addressInSegment));
 			outputProgram.append("D=D+A");
 
 		# Store the value from the source in D
@@ -127,6 +134,11 @@ def translatePopCommand(outputProgram, line):
 	
 	if segmentName == "temp":
 		address = int(address) + TEMP0;
+		outputProgram.append("@{address}".format(address=address));
+		outputProgram.append("D=A");
+
+	elif segmentName == "static":
+		address = int(address) + STATIC_START;
 		outputProgram.append("@{address}".format(address=address));
 		outputProgram.append("D=A");
 
