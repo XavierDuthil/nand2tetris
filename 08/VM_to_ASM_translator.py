@@ -17,9 +17,12 @@ COMMANDS = {
 	"neg": 		translateNegCommand,
 	"and": 		translateAndCommand,
 	"or": 		translateOrCommand,
+	"not":		translateNotCommand,
 	"label":	translateLabelDefinitionCommand,
 	"if-goto":	translateIfGotoCommand,
 	"goto":		translateGotoCommand,
+	"function":	translateFunctionDefinitionCommand,
+	"return":	translateReturnCommand,
 }
 
 def readArguments():

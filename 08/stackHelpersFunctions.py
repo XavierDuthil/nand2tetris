@@ -17,8 +17,23 @@ def pushD():
 	] + incrementStackPointer();
 
 def popD():
-	commands = [	
+	commands = [
+		"@SP",
 		"A=M",
 		"D=M",
 	];
 	return decrementStackPointer() + commands;
+
+def popInto(destinationAddress):
+	commands = [
+		"@{destinationAddress}".format(destinationAddress=destinationAddress),
+		"M=D",
+	];
+	return popD() + commands;
+
+def pushConstant(value):
+	commands = [
+		"@{value}".format(value=value),
+		"D=A",
+	];
+	return commands + pushD();

@@ -89,6 +89,13 @@ def translateNegCommand(outputProgram, line):
 	outputProgram.append("M=-M");
 	outputProgram += incrementStackPointer();
 
+def translateNotCommand(outputProgram, line):
+	# Read value at the previous pointed address and store it in D
+	outputProgram += decrementStackPointer();
+	outputProgram.append("A=M");
+	outputProgram.append("M=!M");
+	outputProgram += incrementStackPointer();
+
 def operation(func):
 	def newFunc(outputProgram, line):
 		# Read value at the previous pointed address and store it in D
