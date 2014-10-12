@@ -50,6 +50,7 @@ def translateReturnCommand(outputProgram, line):
 	outputProgram += popInto("THIS");
 	outputProgram += popInto("ARG");
 	outputProgram += popInto("LCL");
+	outputProgram += popInto("R14");
 
 	# SP repasse à la valeur de ARG + 1
 	outputProgram.append("@R13");
@@ -57,25 +58,38 @@ def translateReturnCommand(outputProgram, line):
 	outputProgram.append("@SP");
 	outputProgram.append("M=D");
 
+	# Go to returnAddress
+	outputProgram.append("@R14");
+	outputProgram.append("A=M");
+	outputProgram.append("0;JMP");
+
 
 def translateCallCommand(outputProgram, line):
-	pass;
+	functionName = REGEX_SECOND_WORD.match(line).group(1);	# Le nom de la fonction
+	nArgs = REGEX_THIRD_WORD.match(line).group(1); 			# Le nombre d'arguments à la fonction (déja dans la stack)
 
-	# On stocke returnAddress
+	# On ajoute returnAddress à la stack (à la suite des arguments)
+	returnAddress = len(outputProgram) + 46;
+	outputProgram += pushConstant(returnAddress);
 
+	# On ajoute les valeurs à sauvegarder à la stack
+	outputProgram += pushConstant("LCL");
+	outputProgram += pushConstant("ARG");
+	outputProgram += pushConstant("THIS");
+	outputProgram += pushConstant("THAT");
 
+	# On définit le nouveau ARG
+	outputProgram.append("@{offset}".format(offset=int(nArgs)+5));
+	outputProgram.append("D=A");
+	outputProgram.append("@SP");
+	outputProgram.append("D=M-D");
 
-	# C'est un début de réflexion, on l'avait mis sur definition de fonction, en fait c'est sur l'appel
-	# La valeur de Argument prend la valeur de l'état initial de SP avant la définition de la fonction
-#	outputProgram.append("@SP");
-#	outputProgram.append("D=M");
-#	outputProgram.append("@ARG");
-#	outputProgram.append("M=D");
-#
-#	# La valeur de Local ne bouge pas, mais comme on connait la longueur de ce segment, SP obtiendra la valeur suivant ce segment
-#	outputProgram.append("@LCL");
-#	outputProgram.append("D=M");
-#	outputProgram.append("@{localArgsCount}".format(localArgsCount=localArgsCount));
-#	outputProgram.append("D=D+A");
-#	outputProgram.append("@SP");
-#	outputProgram.append("M=D");
+	# On définit le nouveau LCL, qui prend la valeur de SP
+	outputProgram.append("@SP");
+	outputProgram.append("D=M");
+	outputProgram.append("@LCL");
+	outputProgram.append("M=D");
+
+	# Go to 'functionName'
+	outputProgram.append("@{functionName}".format(functionName=functionName));
+	outputProgram.append("0;JMP");
