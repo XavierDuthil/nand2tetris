@@ -59,17 +59,23 @@ def translateReturnCommand(outputProgram, line):
 
 
 def translateCallCommand(outputProgram, line):
+	pass;
+
+	# On stocke returnAddress
+
+
+
 	# C'est un début de réflexion, on l'avait mis sur definition de fonction, en fait c'est sur l'appel
 	# La valeur de Argument prend la valeur de l'état initial de SP avant la définition de la fonction
-	outputProgram.append("@SP");
-	outputProgram.append("D=M");
-	outputProgram.append("@ARG");
-	outputProgram.append("M=D");
-
-	# La valeur de Local ne bouge pas, mais comme on connait la longueur de ce segment, SP obtiendra la valeur suivant ce segment
-	outputProgram.append("@LCL");
-	outputProgram.append("D=M");
-	outputProgram.append("@{localArgsCount}".format(localArgsCount=localArgsCount));
-	outputProgram.append("D=D+A");
-	outputProgram.append("@SP");
-	outputProgram.append("M=D");
+#	outputProgram.append("@SP");
+#	outputProgram.append("D=M");
+#	outputProgram.append("@ARG");
+#	outputProgram.append("M=D");
+#
+#	# La valeur de Local ne bouge pas, mais comme on connait la longueur de ce segment, SP obtiendra la valeur suivant ce segment
+#	outputProgram.append("@LCL");
+#	outputProgram.append("D=M");
+#	outputProgram.append("@{localArgsCount}".format(localArgsCount=localArgsCount));
+#	outputProgram.append("D=D+A");
+#	outputProgram.append("@SP");
+#	outputProgram.append("M=D");

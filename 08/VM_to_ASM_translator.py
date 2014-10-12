@@ -23,19 +23,22 @@ COMMANDS = {
 	"goto":		translateGotoCommand,
 	"function":	translateFunctionDefinitionCommand,
 	"return":	translateReturnCommand,
+	"call":		translateCallCommand,
 }
 
 def readArguments():
 	parser = argparse.ArgumentParser(description='Translate VM code to Hack code.');
-	parser.add_argument('vmFile', type=str, help='the file to translate');
+	parser.add_argument('vmFiles', type=str, nargs='+', help='the files to translate');
 	parser.add_argument('-o', '--output', dest='output_file', action='store',
 	                   help='the output hack code file');
 
 	return parser.parse_args();
 
-def readVmProgram(vmFile):
-	with open(vmFile, 'r') as f:
-		lines = f.read().splitlines();
+def readVmPrograms(vmFiles):
+	lines = [];
+	for vmFile in vmFiles:
+		with open(vmFile, 'r') as f:
+			lines += f.read().splitlines();
 
 	vmProgram = [];
 	for line in lines:
@@ -80,7 +83,7 @@ def writeHackProgram(outputProgram, output_file):
 
 def main():
 	args = readArguments();
-	vmProgram = readVmProgram(args.vmFile);
+	vmProgram = readVmPrograms(args.vmFiles);
 	outputProgram = translate(vmProgram);
 	writeHackProgram(outputProgram, args.output_file);
 
