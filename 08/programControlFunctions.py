@@ -65,12 +65,14 @@ def translateReturnCommand(outputProgram, line):
 
 
 def translateCallCommand(outputProgram, line):
+	uniqueIndex = getUniqueIndex(outputProgram);
 	functionName = REGEX_SECOND_WORD.match(line).group(1);	# Le nom de la fonction
 	nArgs = REGEX_THIRD_WORD.match(line).group(1); 			# Le nombre d'arguments à la fonction (déja dans la stack)
 
-	# On ajoute returnAddress à la stack (à la suite des arguments)
-	returnAddress = len(outputProgram) + 46;
-	outputProgram += pushConstant(returnAddress);
+	# On push la ligne du label 'returnAddress'
+	outputProgram.append("@functionReturn{uniqueIndex}".format(uniqueIndex=uniqueIndex));
+	outputProgram.append("D=A");
+	outputProgram += pushD();
 
 	# On ajoute les valeurs à sauvegarder à la stack
 	outputProgram += pushConstant("LCL");
@@ -90,6 +92,25 @@ def translateCallCommand(outputProgram, line):
 	outputProgram.append("@LCL");
 	outputProgram.append("M=D");
 
-	# Go to 'functionName'
+	# Execute la fonction 'functionName'
 	outputProgram.append("@{functionName}".format(functionName=functionName));
 	outputProgram.append("0;JMP");
+
+	# Label de fin de fonction
+	outputProgram.append("(functionReturn{uniqueIndex})".format(uniqueIndex=uniqueIndex));
+
+def bootstrap():
+	# Initialisation du stack pointer à 256
+	outputProgram = ListWithAttribute([
+		"@256", 
+		"D=A", 
+		"@SP",
+		"M=D"
+	]);
+	outputProgram.uniqueIndex = 0;
+
+	# Appelle la fonction Sys.init
+	callCommand = "call Sys.init 0";
+	translateCallCommand(outputProgram, callCommand);
+
+	return outputProgram;

@@ -132,6 +132,7 @@ def translateOrCommand(outputProgram, line):
 
 def comparison(func):
 	def newFunc(outputProgram, line):
+		uniqueIndex = getUniqueIndex(outputProgram);
 		outputProgram += popD();
 
 		# Substract previous value to this one and store result into D
@@ -139,20 +140,24 @@ def comparison(func):
 		outputProgram.append("A=M");
 		outputProgram.append("D=M-D");
 
-		outputProgram.append("@{value}".format(value=len(outputProgram) + 5));
+		outputProgram.append("@ifTrue{uniqueIndex}".format(uniqueIndex=uniqueIndex));
 
 		# Execute the decorated function
 		func(outputProgram, line);
 
 		# Else :
 		outputProgram.append("D=0");
-		outputProgram.append("@{value}".format(value=len(outputProgram) + 3));
+		outputProgram.append("@endIf{uniqueIndex}".format(uniqueIndex=uniqueIndex));
 		outputProgram.append("0;JMP");
 
-		# If :
+		# If Label :
+		outputProgram.append("(ifTrue{uniqueIndex})".format(uniqueIndex=uniqueIndex));
 		outputProgram.append("D=-1");
 
+		# EndIf Label
+		outputProgram.append("(endIf{uniqueIndex})".format(uniqueIndex=uniqueIndex));
 		outputProgram += pushD();
+
 	return newFunc;
 
 @comparison

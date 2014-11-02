@@ -37,3 +37,10 @@ def pushConstant(value):
 		"D=A",
 	];
 	return commands + pushD();
+
+def getUniqueIndex(outputProgram):
+	outputProgram.uniqueIndex += 1;
+	return outputProgram.uniqueIndex;
+
+class ListWithAttribute(list):
+	uniqueIndex = 0;

@@ -55,9 +55,8 @@ def readVmPrograms(vmFiles):
 
 
 def translate(vmProgram):
-	outputProgram = [];
-
-	outputProgram = [];
+	# Add Bootstrap
+	outputProgram = bootstrap();
 
 	for line in vmProgram:
 		firstWord = REGEX_FIRST_WORD.match(line).group(1);
@@ -67,7 +66,6 @@ def translate(vmProgram):
 
 		else:
 			print("Line ignored : {line}".format(line=line));
-
 
 	return outputProgram;
 
