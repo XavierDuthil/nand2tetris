@@ -38,6 +38,13 @@ def pushConstant(value):
 	];
 	return commands + pushD();
 
+def pushPointer(value):
+	commands = [
+		"@{value}".format(value=value),
+		"D=M",
+	];
+	return commands + pushD();
+
 def getUniqueIndex(outputProgram):
 	outputProgram.uniqueIndex += 1;
 	return outputProgram.uniqueIndex;

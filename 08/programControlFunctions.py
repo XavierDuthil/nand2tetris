@@ -10,7 +10,7 @@ def translateIfGotoCommand(outputProgram, line):
 
 	outputProgram += popD();
 	outputProgram.append("@{labelName}".format(labelName=labelName));
-	outputProgram.append("D;JGT");
+	outputProgram.append("D;JLT");
 
 def translateGotoCommand(outputProgram, line):
 	labelName = REGEX_SECOND_WORD.match(line).group(1);
@@ -75,16 +75,18 @@ def translateCallCommand(outputProgram, line):
 	outputProgram += pushD();
 
 	# On ajoute les valeurs à sauvegarder à la stack
-	outputProgram += pushConstant("LCL");
-	outputProgram += pushConstant("ARG");
-	outputProgram += pushConstant("THIS");
-	outputProgram += pushConstant("THAT");
+	outputProgram += pushPointer("LCL");
+	outputProgram += pushPointer("ARG");
+	outputProgram += pushPointer("THIS");
+	outputProgram += pushPointer("THAT");
 
 	# On définit le nouveau ARG
 	outputProgram.append("@{offset}".format(offset=int(nArgs)+5));
 	outputProgram.append("D=A");
 	outputProgram.append("@SP");
 	outputProgram.append("D=M-D");
+	outputProgram.append("@ARG");
+	outputProgram.append("M=D");
 
 	# On définit le nouveau LCL, qui prend la valeur de SP
 	outputProgram.append("@SP");
