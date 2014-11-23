@@ -7,7 +7,7 @@ SEGMENTS_POINTER = {
 	"that":		"THAT",
 };
 SEGMENTS_OFFSET = {
-	"temp":		0,
+	"temp":		5,
 	"static":	16,
 	"pointer": 	3,
 };
@@ -50,7 +50,7 @@ def translatePopCommand(outputProgram, line):
 	# Push value of the destination address (place to pop to) on stack
 	outputProgram.append("@SP");
 	outputProgram.append("A=M");
-	outputProgram.append("M=D");	
+	outputProgram.append("M=D");
 
 	# Store value to pop in D
 	outputProgram += decrementStackPointer();
