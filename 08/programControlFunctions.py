@@ -58,6 +58,9 @@ def translateReturnCommand(outputProgram, line):
 	outputProgram.append("@SP");
 	outputProgram.append("M=D");
 
+	###### DEBUG #####
+	outputProgram.append("@2000");
+
 	# Go to returnAddress
 	outputProgram.append("@R14");
 	outputProgram.append("A=M");
@@ -81,7 +84,7 @@ def translateCallCommand(outputProgram, line):
 	outputProgram += pushPointer("THAT");
 
 	# On définit le nouveau ARG
-	outputProgram.append("@{offset}".format(offset=int(nArgs)+5));
+	outputProgram.append("@{offset}".format(offset=int(nArgs)+6));
 	outputProgram.append("D=A");
 	outputProgram.append("@SP");
 	outputProgram.append("D=M-D");

@@ -45,6 +45,7 @@ def translatePushCommand(outputProgram, line):
 def translatePopCommand(outputProgram, line):
 	segmentName = REGEX_SECOND_WORD.match(line).group(1);
 	addressInSegment = int(REGEX_THIRD_WORD.match(line).group(1));
+	outputProgram.append("@2001");
 	loadAbsoluteAddressIntoD(outputProgram, segmentName, addressInSegment);
 
 	# Push value of the destination address (place to pop to) on stack
@@ -66,6 +67,7 @@ def translatePopCommand(outputProgram, line):
 	outputProgram.append("M=D");	# Place the value at the address of the specified segment
 	
 	outputProgram += decrementStackPointer();
+	outputProgram.append("@2002");
 
 
 def loadAbsoluteAddressIntoD(outputProgram, segmentName, addressInSegment):
