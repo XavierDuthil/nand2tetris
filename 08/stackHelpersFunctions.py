@@ -45,9 +45,29 @@ def pushPointer(value):
 	];
 	return commands + pushD();
 
-def getUniqueIndex(outputProgram):
-	outputProgram.uniqueIndex += 1;
-	return outputProgram.uniqueIndex;
-
-class ListWithAttribute(list):
+class VmProgram(object):
+	positionIndex = -1;
+	programInstructions = [];
 	uniqueIndex = 0;
+	filePosition = {};
+
+	def getNextLine(self):
+		self.positionIndex += 1;
+		return self.programInstructions[self.positionIndex];
+
+	def getFileName(self):
+		previousMarkers = [key for key in self.filePosition.keys() if key <= self.positionIndex];
+		currentMarker = max(previousMarkers);
+		fileName = self.filePosition[currentMarker];
+		return fileName;
+
+	def addFile(self, fileName, fileContent):
+		self.filePosition[len(self.programInstructions)] = fileName;
+		self.programInstructions += fileContent;
+
+	def hasNext(self):
+		return self.positionIndex < len(self.programInstructions)-1;
+
+	def getUniqueIndex(self):
+		self.uniqueIndex += 1;
+		return self.uniqueIndex;

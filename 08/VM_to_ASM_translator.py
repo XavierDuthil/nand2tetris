@@ -1,6 +1,7 @@
 import argparse
 import re  # regular expressions
 import sys  # stdout
+import os
 import time
 from stackArithmeticFunctions import *
 from programControlFunctions import *
@@ -35,13 +36,19 @@ def readArguments():
 	return parser.parse_args();
 
 def readVmPrograms(vmFiles):
-	lines = [];
+	vmProgram = VmProgram();
 	for vmFile in vmFiles:
 		with open(vmFile, 'r') as f:
-			lines += f.read().splitlines();
+			fileContent = f.read().splitlines();
 
-	vmProgram = [];
-	for line in lines:
+		fileContent = stripComments(fileContent);
+		vmProgram.addFile(os.path.basename(vmFile), fileContent);
+
+	return vmProgram;
+
+def stripComments(program):
+	programWithoutComments = [];
+	for line in program:
 		if not line.startswith("//") and len(line):
 			newLine = line;
 
@@ -49,20 +56,19 @@ def readVmPrograms(vmFiles):
 				newLine = re.sub('//.*', '', line);
 
 			# vmProgram contains the exploitable data, white spaces are stripped.
-			vmProgram.append(newLine.strip());
+			programWithoutComments.append(newLine.strip());
 
-	return vmProgram;
-
+	return programWithoutComments;
 
 def translate(vmProgram):
-	# Add Bootstrap
-	outputProgram = bootstrap();
+	outputProgram = bootstrap(vmProgram);
 
-	for line in vmProgram:
+	while vmProgram.hasNext():
+		line = vmProgram.getNextLine();
 		firstWord = REGEX_FIRST_WORD.match(line).group(1);
 
 		if firstWord in COMMANDS:
-			COMMANDS[firstWord](outputProgram, line);
+			COMMANDS[firstWord](outputProgram, line, vmProgram);
 
 		else:
 			print("Line ignored : {line}".format(line=line));

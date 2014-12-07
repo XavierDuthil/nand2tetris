@@ -1,23 +1,23 @@
 from stackHelpersFunctions import *
 
-def translateLabelDefinitionCommand(outputProgram, line):
+def translateLabelDefinitionCommand(outputProgram, line, vmProgram):
 	labelName = REGEX_SECOND_WORD.match(line).group(1);
 	outputProgram.append("({labelName})".format(labelName=labelName));
 
 
-def translateIfGotoCommand(outputProgram, line):
+def translateIfGotoCommand(outputProgram, line, vmProgram):
 	labelName = REGEX_SECOND_WORD.match(line).group(1);
 
 	outputProgram += popD();
 	outputProgram.append("@{labelName}".format(labelName=labelName));
 	outputProgram.append("D;JLT");
 
-def translateGotoCommand(outputProgram, line):
+def translateGotoCommand(outputProgram, line, vmProgram):
 	labelName = REGEX_SECOND_WORD.match(line).group(1);
 	outputProgram.append("@{labelName}".format(labelName=labelName));
 	outputProgram.append("0;JMP");
 
-def translateFunctionDefinitionCommand(outputProgram, line):
+def translateFunctionDefinitionCommand(outputProgram, line, vmProgram):
 	functionName = REGEX_SECOND_WORD.match(line).group(1);
 	localVarsCount = int(REGEX_THIRD_WORD.match(line).group(1));
 	outputProgram.append("({functionName})".format(functionName=functionName));
@@ -26,7 +26,7 @@ def translateFunctionDefinitionCommand(outputProgram, line):
 	for _ in range(localVarsCount):
 		outputProgram += pushConstant(0);
 
-def translateReturnCommand(outputProgram, line):
+def translateReturnCommand(outputProgram, line, vmProgram):
 	# On stocke ARG+1, qui sera la valeur finale de SP
 	outputProgram.append("@ARG");
 	outputProgram.append("D=M+1");
@@ -67,8 +67,8 @@ def translateReturnCommand(outputProgram, line):
 	outputProgram.append("0;JMP");
 
 
-def translateCallCommand(outputProgram, line):
-	uniqueIndex = getUniqueIndex(outputProgram);
+def translateCallCommand(outputProgram, line, vmProgram):
+	uniqueIndex = vmProgram.getUniqueIndex();
 	functionName = REGEX_SECOND_WORD.match(line).group(1);	# Le nom de la fonction
 	nArgs = REGEX_THIRD_WORD.match(line).group(1); 			# Le nombre d'arguments à la fonction (déja dans la stack)
 
@@ -104,18 +104,17 @@ def translateCallCommand(outputProgram, line):
 	# Label de fin de fonction
 	outputProgram.append("(functionReturn{uniqueIndex})".format(uniqueIndex=uniqueIndex));
 
-def bootstrap():
+def bootstrap(vmProgram):
 	# Initialisation du stack pointer à 256
-	outputProgram = ListWithAttribute([
+	outputProgram =[
 		"@256", 
 		"D=A", 
 		"@SP",
 		"M=D"
-	]);
-	outputProgram.uniqueIndex = 0;
+	];
 
 	# Appelle la fonction Sys.init
 	callCommand = "call Sys.init 0";
-	translateCallCommand(outputProgram, callCommand);
+	translateCallCommand(outputProgram, callCommand, vmProgram);
 
 	return outputProgram;
