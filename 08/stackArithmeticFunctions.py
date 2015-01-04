@@ -75,7 +75,6 @@ def translatePopCommand(outputProgram, line, vmProgram):
 	outputProgram.append("M=D");	# Place the value at the address of the specified segment
 	
 	outputProgram += decrementStackPointer();
-	outputProgram.append("@2002");
 
 
 def loadAbsoluteAddressIntoD(outputProgram, segmentName, addressInSegment):
@@ -142,7 +141,7 @@ def translateOrCommand(outputProgram, line, vmProgram):
 
 def comparison(func):
 	def newFunc(outputProgram, line, vmProgram):
-		uniqueIndex = getUniqueIndex(outputProgram);
+		uniqueIndex = vmProgram.getUniqueIndex();
 		outputProgram += popD();
 
 		# Substract previous value to this one and store result into D

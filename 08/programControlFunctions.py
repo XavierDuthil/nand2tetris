@@ -29,15 +29,12 @@ def translateFunctionDefinitionCommand(outputProgram, line, vmProgram):
 def translateReturnCommand(outputProgram, line, vmProgram):
 	# On stocke ARG+1, qui sera la valeur finale de SP
 	outputProgram.append("@ARG");
-	outputProgram.append("D=M+1");
+	outputProgram.append("D=M");
 	outputProgram.append("@R13");
 	outputProgram.append("M=D");
 
-	# On retourne la valeur de la stack en l'empilant sur la stack précédente
-	outputProgram += popD();
-	outputProgram.append("@ARG");
-	outputProgram.append("A=M");
-	outputProgram.append("M=D");
+	# On sauvegarde la valeur de retour de la fonction dans R15
+	outputProgram += popInto("R15");
 
 	# SP passe à la valeur de LOCAL
 	outputProgram.append("@LCL");
@@ -58,8 +55,10 @@ def translateReturnCommand(outputProgram, line, vmProgram):
 	outputProgram.append("@SP");
 	outputProgram.append("M=D");
 
-	###### DEBUG #####
-	outputProgram.append("@2000");
+	# On push la valeur de retour
+	outputProgram.append("@R15");
+	outputProgram.append("D=M");
+	outputProgram += pushD();
 
 	# Go to returnAddress
 	outputProgram.append("@R14");
@@ -84,7 +83,7 @@ def translateCallCommand(outputProgram, line, vmProgram):
 	outputProgram += pushPointer("THAT");
 
 	# On définit le nouveau ARG
-	outputProgram.append("@{offset}".format(offset=int(nArgs)+6));
+	outputProgram.append("@{offset}".format(offset=int(nArgs)+5));
 	outputProgram.append("D=A");
 	outputProgram.append("@SP");
 	outputProgram.append("D=M-D");
