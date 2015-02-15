@@ -3,6 +3,9 @@ import re  # regular expressions
 import sys  # stdout
 import os
 import time
+from string import ascii_letters
+from string import digits
+from string import whitespace
 
 #REGEX_FIRST_WORD = re.compile('^([^ ]*)')
 #COMMANDS = {}
@@ -37,24 +40,72 @@ def translate(jackProgram):
 
 	return outputProgram
 
+def tokenize(jackProgram):
+	token = ""
+	tokens = []
+	isInString = False
+	tokenDictionary = {}
+
+	for char in jackProgram:
+		# Case of a String :
+		if char == '"':
+			if isInString:
+				isInString = False
+				tokens.append(token)
+				token = ""
+				continue
+			isInString = True
+			continue
+
+		if isInString:
+			token += char
+			continue
+
+		# Case of the rest
+		if char in ascii_letters or char in digits or char == '_':
+			token += char
+			continue
+
+		# if already building a tokenString and it breaks
+		if token:
+			tokens.append(token)
+			token = ""
+		
+		if char in whitespace:
+			continue
+
+		# Case of a symbol
+		else:
+			tokens.append(char)
+			token = ""
+			continue
+
+	return tokens
+
+def convertToXML(tokens):
+
+	return tokenFile
+
 def getOutputFile(inputFile):
 	return re.sub("jack$", "vm", inputFile)
 
-def writeVMProgram(outputProgram, outputFile):
+def writeFile(outputText, outputFile):
 	if not outputFile:
-		sys.stdout.write(outputProgram)
+		sys.stdout.write(outputText)
 
 	else:
 		with open(outputFile, 'w') as f:
-			f.write(outputProgram)
+			f.write(outputText)
 
 def main():
 	args = readArguments()
 	for jackFile in args.jackFiles:
 		jackProgram = readJackPrograms(jackFile)
-		outputProgram = translate(jackProgram)
-		outputFile = getOutputFile(jackFile)
-		writeVMProgram(outputProgram, outputFile)
+
+		# Token file generation
+		tokens = tokenize(jackProgram)
+		#tokenFile = convertToXML(tokens)
+		writeFile("\n".join(tokens), None)
 
 if __name__ == "__main__":
 	time1 = time.time()
