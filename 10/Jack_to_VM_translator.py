@@ -8,6 +8,7 @@ from string import digits
 from string import whitespace
 
 #REGEX_FIRST_WORD = re.compile('^([^ ]*)')
+REGEX_TOKEN_TYPE_IDENTIFIER = re.compile('[a-zA-Z_]\w*')
 #COMMANDS = {}
 
 def readArguments():
@@ -51,10 +52,12 @@ def tokenize(jackProgram):
 		if char == '"':
 			if isInString:
 				isInString = False
+				token += char
 				tokens.append(token)
 				token = ""
 				continue
 			isInString = True
+			token += char
 			continue
 
 		if isInString:
@@ -82,7 +85,37 @@ def tokenize(jackProgram):
 
 	return tokens
 
-def convertToXML(tokens):
+def analyseTokenType(tokenList):
+	knownKeywords = ("class","constructor","function","method","field","static","var","int","char","boolean",
+		"void","true","false","null","this","let","do","if","else","while","return",)
+	knownSymbols = ("{","}","(",")","[","]",".",",",";","+","-","*","/","&","|","<",">","=","~",)
+	tokensWithTypes = []
+
+	for token in tokenList:
+		if token in knownKeywords:
+			tokenType = "keyword"
+
+		elif token in knownSymbols:
+			tokenType = "symbol"
+
+		elif token.isdigit() and 0 <= int(token) <= 32767:
+			tokenType = "integerConstant"
+			
+		elif token.startswith('"') and token.endswith('"'):
+			token = token[1:-2]
+			tokenType = "stringConstant"
+
+		elif REGEX_TOKEN_TYPE_IDENTIFIER.match(token):
+			tokenType = "identifier"
+
+		else:
+			raise Exception("Error : invalid token {}".format(token))
+
+		tokensWithTypes.append((token, tokenType))
+	return tokensWithTypes
+
+def convertToXML(tokensWithTypes):
+	
 
 	return tokenFile
 
@@ -103,9 +136,10 @@ def main():
 		jackProgram = readJackPrograms(jackFile)
 
 		# Token file generation
-		tokens = tokenize(jackProgram)
-		#tokenFile = convertToXML(tokens)
-		writeFile("\n".join(tokens), None)
+		tokenList = tokenize(jackProgram)
+		tokensWithTypes = analyseTokenType(tokenList)
+		#tokenFile = convertToXML(tokenList)
+		writeFile("\n".join(tokenList), None)
 
 if __name__ == "__main__":
 	time1 = time.time()
