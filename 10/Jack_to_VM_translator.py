@@ -6,6 +6,7 @@ import time
 from string import ascii_letters
 from string import digits
 from string import whitespace
+import xml.etree.ElementTree as ET
 
 #REGEX_FIRST_WORD = re.compile('^([^ ]*)')
 REGEX_TOKEN_TYPE_IDENTIFIER = re.compile('[a-zA-Z_]\w*')
@@ -115,16 +116,23 @@ def analyseTokenType(tokenList):
 	return tokensWithTypes
 
 def convertToXML(tokensWithTypes):
-	
+	root = ET.Element("tokens")
 
-	return tokenFile
+
+	for tokenValue, tokenType in tokensWithTypes:
+		thisToken = ET.SubElement(root, tokenType)
+		thisToken.text = tokenValue
+
+	tokenFile = ET.tostring(root).decode("utf-8")
+
+	return tokenFile.replace("><", ">\n<")
 
 def getOutputFile(inputFile):
 	return re.sub("jack$", "vm", inputFile)
 
 def writeFile(outputText, outputFile):
 	if not outputFile:
-		sys.stdout.write(outputText)
+		print(outputText)
 
 	else:
 		with open(outputFile, 'w') as f:
@@ -138,8 +146,8 @@ def main():
 		# Token file generation
 		tokenList = tokenize(jackProgram)
 		tokensWithTypes = analyseTokenType(tokenList)
-		#tokenFile = convertToXML(tokenList)
-		writeFile("\n".join(tokenList), None)
+		tokenFile = convertToXML(tokensWithTypes)
+		writeFile(tokenFile, jackFile.replace(".jack", "T.xml"))
 
 if __name__ == "__main__":
 	time1 = time.time()
