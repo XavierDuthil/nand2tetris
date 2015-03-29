@@ -7,10 +7,13 @@ from string import ascii_letters
 from string import digits
 from string import whitespace
 import xml.etree.ElementTree as ET
+from collections import namedtuple
 
 #REGEX_FIRST_WORD = re.compile('^([^ ]*)')
 REGEX_TOKEN_TYPE_IDENTIFIER = re.compile('[a-zA-Z_]\w*')
 #COMMANDS = {}
+Token = namedtuple("Token", ["type", "value"])
+
 
 def readArguments():
 	parser = argparse.ArgumentParser(description='Translate Jack code to VM code.')
@@ -112,13 +115,13 @@ def analyseTokenType(tokenList):
 		else:
 			raise Exception("Error : invalid token {}".format(token))
 
-		tokensWithTypes.append((token, tokenType))
+		tokensWithTypes.append(Token(value=token, type=tokenType))
 	return tokensWithTypes
 
 def convertToXML(tokensWithTypes):
 	root = ET.Element("tokens")
 
-	for tokenValue, tokenType in tokensWithTypes:
+	for tokenType, tokenValue in tokensWithTypes:
 		thisToken = ET.SubElement(root, tokenType)
 		thisToken.text = " {} ".format(tokenValue)
 		thisToken.tail = "\n";
@@ -126,6 +129,51 @@ def convertToXML(tokensWithTypes):
 	tokenFile = ET.tostring(root).decode("utf-8")
 
 	return tokenFile
+
+def parseFile(tokensWithTypes):
+	root = Node()
+
+	while tokensWithTypes[0] == ("keyword", "class"):
+		classNode = parseClass(tokensWithTypes)
+		root.children.append(classNode)
+
+	if tokensWithTypes:
+		raise Exception("Syntax error. Excpected class, found {}".format(tokensWithTypes[0]))
+
+def parseClass(tokensWithTypes):
+	classNode = Node()
+
+	keyword = makeNode(tokensWithTypes, "keyword", "class")
+	identifier = makeNode(tokensWithTypes, "identifier")
+	symbolOpen = makeNode(tokensWithTypes, "symbol", "{")
+
+	#TODO
+
+	classNode.children = [keyword, identifier, symbolOpen]
+
+
+# Pop the first token from the list, verify condition and return as Node
+def takeNode(tokensWithTypes, expectedType, expectedValue=None):
+	currentToken = tokensWithTypes.pop(0)
+
+	if currentToken.type != expectedType:
+		raise Exception("Syntax error. Expected type {0}, found type {1}".format(expectedType, currentToken.type)
+
+	if expectedValue is not None and currentToken.value != expectedValue:
+		raise Exception("Syntax error. Expected value '{0}', found value '{1}'".format(expectedValue, currentToken.value)
+
+	return Node(currentToken)
+
+
+
+def parseStatement():
+def parseWhileStatement():
+def parseIfStatement():
+def parseStatementSequence():
+def parseExpression():
+
+
+
 
 def getOutputFile(inputFile):
 	return re.sub("jack$", "vm", inputFile)
