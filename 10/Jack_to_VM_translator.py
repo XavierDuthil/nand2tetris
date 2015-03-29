@@ -103,7 +103,7 @@ def analyseTokenType(tokenList):
 			tokenType = "integerConstant"
 			
 		elif token.startswith('"') and token.endswith('"'):
-			token = token[1:-2]
+			token = token[1:-1]
 			tokenType = "stringConstant"
 
 		elif REGEX_TOKEN_TYPE_IDENTIFIER.match(token):
@@ -118,14 +118,14 @@ def analyseTokenType(tokenList):
 def convertToXML(tokensWithTypes):
 	root = ET.Element("tokens")
 
-
 	for tokenValue, tokenType in tokensWithTypes:
 		thisToken = ET.SubElement(root, tokenType)
-		thisToken.text = tokenValue
+		thisToken.text = " {} ".format(tokenValue)
+		thisToken.tail = "\n";
 
 	tokenFile = ET.tostring(root).decode("utf-8")
 
-	return tokenFile.replace("><", ">\n<")
+	return tokenFile
 
 def getOutputFile(inputFile):
 	return re.sub("jack$", "vm", inputFile)
