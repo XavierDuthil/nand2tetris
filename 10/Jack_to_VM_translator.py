@@ -8,6 +8,7 @@ from string import digits
 from string import whitespace
 import xml.etree.ElementTree as ET
 from collections import namedtuple
+from Node import Node
 
 #REGEX_FIRST_WORD = re.compile('^([^ ]*)')
 REGEX_TOKEN_TYPE_IDENTIFIER = re.compile('[a-zA-Z_]\w*')
@@ -118,38 +119,86 @@ def analyseTokenType(tokenList):
 		tokensWithTypes.append(Token(value=token, type=tokenType))
 	return tokensWithTypes
 
-def convertToXML(tokensWithTypes):
+def tokenListToXML(tokensWithTypes):
 	root = ET.Element("tokens")
 
 	for tokenType, tokenValue in tokensWithTypes:
-		thisToken = ET.SubElement(root, tokenType)
-		thisToken.text = " {} ".format(tokenValue)
-		thisToken.tail = "\n";
+		thisToken = createXMLNode(tokenType, tokenValue)
+		root.append(thisToken)
 
-	tokenFile = ET.tostring(root).decode("utf-8")
+	return root
 
-	return tokenFile
+def NodeToXML(node):
+	# Type and Value
+	xmlNode = createXMLNode(node.type, node.value)	
+
+	# Children
+	for child in node.children:
+		xmlNode.append(NodeToXML(child))
+		
+	return xmlNode
+
+def XMLToText(XMLTree):
+	return ET.tostring(XMLTree).decode("utf-8")
+
+def createXMLNode(type, value):
+	XMLNode = ET.Element(type)
+	if value:
+		XMLNode.text = " {} ".format(value)
+
+	XMLNode.tail = "\n"
+	return XMLNode
 
 def parseFile(tokensWithTypes):
-	root = Node()
-
-	while tokensWithTypes[0] == ("keyword", "class"):
-		classNode = parseClass(tokensWithTypes)
-		root.children.append(classNode)
+	classNode = parseClass(tokensWithTypes)
 
 	if tokensWithTypes:
-		raise Exception("Syntax error. Excpected class, found {}".format(tokensWithTypes[0]))
+		raise Exception("Syntax error. Class ended, found {}".format(tokensWithTypes[0]))
+
+	return classNode
 
 def parseClass(tokensWithTypes):
-	classNode = Node()
+	classNode =	Node("class")
 
-	keyword = makeNode(tokensWithTypes, "keyword", "class")
-	identifier = makeNode(tokensWithTypes, "identifier")
-	symbolOpen = makeNode(tokensWithTypes, "symbol", "{")
-
-	#TODO
-
+	keyword = takeNode(tokensWithTypes, expectedType="keyword", expectedValue="class")
+	identifier = takeNode(tokensWithTypes, expectedType="identifier")
+	symbolOpen = takeNode(tokensWithTypes, expectedType="symbol", expectedValue="{")
 	classNode.children = [keyword, identifier, symbolOpen]
+
+	for classVarDec in parseClassVarDec(tokensWithTypes):
+		classNode.children.append(classVarDec)
+
+	for subroutineDec in parseSubroutineDec(tokensWithTypes):
+		classNode.children.append(subroutineDec)
+
+	symbolClose = takeNode(tokensWithTypes, expectedType="symbol", expectedValue="}")
+	classNode.children.append(symbolClose)
+
+	return classNode
+	
+
+def parseClassVarDec(tokensWithTypes):
+	return 
+	yield
+
+def parseSubroutineDec(tokensWithTypes):
+	return
+	yield
+
+def parseStatement():
+	return
+
+def parseWhileStatement():
+	return
+
+def parseIfStatement():
+	return
+
+def parseStatementSequence():
+	return
+
+def parseExpression():
+	return
 
 
 # Pop the first token from the list, verify condition and return as Node
@@ -157,20 +206,12 @@ def takeNode(tokensWithTypes, expectedType, expectedValue=None):
 	currentToken = tokensWithTypes.pop(0)
 
 	if currentToken.type != expectedType:
-		raise Exception("Syntax error. Expected type {0}, found type {1}".format(expectedType, currentToken.type)
+		raise Exception("Syntax error. Expected type {0}, found type {1}".format(expectedType, currentToken.type))
 
 	if expectedValue is not None and currentToken.value != expectedValue:
-		raise Exception("Syntax error. Expected value '{0}', found value '{1}'".format(expectedValue, currentToken.value)
+		raise Exception("Syntax error. Expected value '{0}', found value '{1}'".format(expectedValue, currentToken.value))
 
-	return Node(currentToken)
-
-
-
-def parseStatement():
-def parseWhileStatement():
-def parseIfStatement():
-def parseStatementSequence():
-def parseExpression():
+	return Node.fromToken(currentToken)
 
 
 
@@ -194,8 +235,14 @@ def main():
 		# Token file generation
 		tokenList = tokenize(jackProgram)
 		tokensWithTypes = analyseTokenType(tokenList)
-		tokenFile = convertToXML(tokensWithTypes)
+		XMLTree = tokenListToXML(tokensWithTypes)
+		tokenFile = XMLToText(XMLTree)
 		writeFile(tokenFile, jackFile.replace(".jack", "T.xml"))
+
+		syntaxNode = parseFile(tokensWithTypes)
+		XMLTree = NodeToXML(syntaxNode)
+		syntaxFile = XMLToText(XMLTree)
+		writeFile(syntaxFile, jackFile.replace(".jack", ".xml"))
 
 if __name__ == "__main__":
 	time1 = time.time()
