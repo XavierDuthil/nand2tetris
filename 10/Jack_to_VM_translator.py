@@ -160,30 +160,66 @@ def parseFile(tokensWithTypes):
 def parseClass(tokensWithTypes):
 	classNode =	Node("class")
 
-	keyword = takeNode(tokensWithTypes, expectedType="keyword", expectedValue="class")
+	keyword = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["class"])
 	identifier = takeNode(tokensWithTypes, expectedType="identifier")
-	symbolOpen = takeNode(tokensWithTypes, expectedType="symbol", expectedValue="{")
+	symbolOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["{"])
 	classNode.children = [keyword, identifier, symbolOpen]
 
 	for classVarDec in parseClassVarDec(tokensWithTypes):
 		classNode.children.append(classVarDec)
 
-	for subroutineDec in parseSubroutineDec(tokensWithTypes):
-		classNode.children.append(subroutineDec)
+	while hasSubroutineDec(tokensWithTypes):
+		subroutineDecNode = parseSubroutineDec(tokensWithTypes)
+		classNode.children.append(subroutineDecNode)
 
-	symbolClose = takeNode(tokensWithTypes, expectedType="symbol", expectedValue="}")
-	classNode.children.append(symbolClose)
+	# A décommenter après avoir géré les keywords intermédiaires
+	#symbolClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["}"])
+	#classNode.children.append(symbolClose)
 
 	return classNode
 	
 
 def parseClassVarDec(tokensWithTypes):
 	return 
-	yield
+
+def hasSubroutineDec(tokensWithTypes):
+	firstValues = ["constructor", "function", "method"]
+	return tokensWithTypes[0].value in firstValues:
 
 def parseSubroutineDec(tokensWithTypes):
+	possibleValues = ["constructor", "function", "method"]
+	subroutineDecNode = new Node("subroutineDec")
+	
+	keyword = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=possibleValues)
+
+	try:
+		returnType = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["void", "int", "char", "boolean"])
+	except JackSyntaxError:
+		returnType = takeNode(tokensWithTypes, expectedType="identifier")
+
+	subroutineName = takeNode(tokensWithTypes, expectedType="identifier")
+	symbolParenthesisOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["("])
+	
+	parameterList = parseParameterList(tokensWithTypes)
+	
+	symbolParenthesisClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[")"])
+	subroutineBody = parseSubroutineBody(tokensWithTypes)
+
+	subroutineDecNode.children.append(keyword)
+	subroutineDecNode.children.append(returnType)
+	subroutineDecNode.children.append(subroutineName)
+	subroutineDecNode.children.append(symbolParenthesisOpen)
+	subroutineDecNode.children.append(parameterList)
+	subroutineDecNode.children.append(symbolParenthesisClose)
+	subroutineDecNode.children.append(subroutineBody)
+	return subroutineDecNode
+
+# TODO
+def parseParameterList(tokensWithTypes):
+	return 
+
+def parseSubroutineBody(tokensWithTypes):
 	return
-	yield
 
 def parseStatement():
 	return
@@ -200,20 +236,17 @@ def parseStatementSequence():
 def parseExpression():
 	return
 
-
 # Pop the first token from the list, verify condition and return as Node
-def takeNode(tokensWithTypes, expectedType, expectedValue=None):
-	currentToken = tokensWithTypes.pop(0)
+def takeNode(tokensWithTypes, expectedType, possibleValues=None):
+	currentToken = tokensWithTypes[0]
 
 	if currentToken.type != expectedType:
-		raise Exception("Syntax error. Expected type {0}, found type {1}".format(expectedType, currentToken.type))
+		raise JackSyntaxError("Syntax error. Expected type {0}, found type {1}".format(expectedType, currentToken.type))
 
-	if expectedValue is not None and currentToken.value != expectedValue:
-		raise Exception("Syntax error. Expected value '{0}', found value '{1}'".format(expectedValue, currentToken.value))
+	if possibleValues is not None and currentToken.value not in possibleValues:
+		raise JackSyntaxError("Syntax error. Expected values '{0}', found value '{1}'".format(possibleValues, currentToken.value))
 
-	return Node.fromToken(currentToken)
-
-
+	return Node.fromToken(tokensWithTypes.pop(0))
 
 
 def getOutputFile(inputFile):
