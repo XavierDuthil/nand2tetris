@@ -9,12 +9,15 @@ from string import whitespace
 import xml.etree.ElementTree as ET
 from collections import namedtuple
 from Node import Node
+from contextlib import suppress
+from Exceptions import JackSyntaxError
+import pdb
 
 #REGEX_FIRST_WORD = re.compile('^([^ ]*)')
 REGEX_TOKEN_TYPE_IDENTIFIER = re.compile('[a-zA-Z_]\w*')
 #COMMANDS = {}
 Token = namedtuple("Token", ["type", "value"])
-
+BUILT_IN_TYPES = ["int", "char", "boolean"]
 
 def readArguments():
 	parser = argparse.ArgumentParser(description='Translate Jack code to VM code.')
@@ -145,6 +148,8 @@ def createXMLNode(type, value):
 	XMLNode = ET.Element(type)
 	if value:
 		XMLNode.text = " {} ".format(value)
+	else:
+		XMLNode.text = "\n"
 
 	XMLNode.tail = "\n"
 	return XMLNode
@@ -172,30 +177,40 @@ def parseClass(tokensWithTypes):
 		subroutineDecNode = parseSubroutineDec(tokensWithTypes)
 		classNode.children.append(subroutineDecNode)
 
-	# A décommenter après avoir géré les keywords intermédiaires
-	#symbolClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["}"])
-	#classNode.children.append(symbolClose)
+	symbolClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["}"])
+	classNode.children.append(symbolClose)
 
 	return classNode
 	
 
 def parseClassVarDec(tokensWithTypes):
-	return 
+
+	#TEMP
+	return []
 
 def hasSubroutineDec(tokensWithTypes):
 	firstValues = ["constructor", "function", "method"]
-	return tokensWithTypes[0].value in firstValues:
+	return tokensWithTypes[0].value in firstValues
+
+def hasParameter(tokensWithTypes):
+	tokenType = tokensWithTypes[0].type
+	tokenValue = tokensWithTypes[0].value
+
+	if tokenType == "keyword" and tokenValue in BUILT_IN_TYPES:
+		return True
+	elif tokenType == "identifier":
+		return True
+
+	return False
+
 
 def parseSubroutineDec(tokensWithTypes):
 	possibleValues = ["constructor", "function", "method"]
-	subroutineDecNode = new Node("subroutineDec")
+	subroutineDecNode = Node("subroutineDec")
 	
 	keyword = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=possibleValues)
 
-	try:
-		returnType = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["void", "int", "char", "boolean"])
-	except JackSyntaxError:
-		returnType = takeNode(tokensWithTypes, expectedType="identifier")
+	returnType = parseType(tokensWithTypes, extraTypes=["void"])
 
 	subroutineName = takeNode(tokensWithTypes, expectedType="identifier")
 	symbolParenthesisOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["("])
@@ -212,14 +227,54 @@ def parseSubroutineDec(tokensWithTypes):
 	subroutineDecNode.children.append(parameterList)
 	subroutineDecNode.children.append(symbolParenthesisClose)
 	subroutineDecNode.children.append(subroutineBody)
+
 	return subroutineDecNode
 
-# TODO
+
 def parseParameterList(tokensWithTypes):
-	return 
+	parameterListNode = Node("parameterList")
+
+	# For each parameter :
+	while hasParameter(tokensWithTypes):
+		# Type handling
+		varType = parseType(tokensWithTypes)
+
+		# Variable name handling
+		varName = takeNode(tokensWithTypes, expectedType="identifier")
+
+		parameterListNode.children.append(varType)
+		parameterListNode.children.append(varName)
+
+		# Comma handling
+		with suppress(JackSyntaxError):
+			commaNode = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[","])
+			parameterListNode.children.append(commaNode)
+
+	return parameterListNode
+
+
+def parseType(tokensWithTypes, extraTypes=None):
+	extraTypes = extraTypes or []
+
+	try:
+		varType = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=extraTypes+BUILT_IN_TYPES)
+	except JackSyntaxError:
+		varType = takeNode(tokensWithTypes, expectedType="identifier")
+
+	return varType
 
 def parseSubroutineBody(tokensWithTypes):
-	return
+	# TEMP : prend tout, pour tester
+	subroutineBodyNode = Node("subroutineBody")
+
+	while tokensWithTypes[0].value != "return":
+		tokensWithTypes.pop(0)
+
+	tokensWithTypes.pop(0)
+	tokensWithTypes.pop(0)
+	tokensWithTypes.pop(0)
+
+	return subroutineBodyNode
 
 def parseStatement():
 	return
@@ -241,7 +296,7 @@ def takeNode(tokensWithTypes, expectedType, possibleValues=None):
 	currentToken = tokensWithTypes[0]
 
 	if currentToken.type != expectedType:
-		raise JackSyntaxError("Syntax error. Expected type {0}, found type {1}".format(expectedType, currentToken.type))
+		raise JackSyntaxError("Syntax error. Expected type {0}, found type {1} (value : '{2}')".format(expectedType, currentToken.type, currentToken.value))
 
 	if possibleValues is not None and currentToken.value not in possibleValues:
 		raise JackSyntaxError("Syntax error. Expected values '{0}', found value '{1}'".format(possibleValues, currentToken.value))
