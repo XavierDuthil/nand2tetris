@@ -11,6 +11,52 @@
 </parameterList>
 <symbol> ) </symbol>
 <subroutineBody>
+<symbol> { </symbol>
+<varDec>
+<keyword> var </keyword>
+<identifier> Array </identifier>
+<identifier> a </identifier>
+<symbol> ; </symbol>
+</varDec>
+<varDec>
+<keyword> var </keyword>
+<keyword> int </keyword>
+<identifier> length </identifier>
+<symbol> ; </symbol>
+</varDec>
+<varDec>
+<keyword> var </keyword>
+<keyword> int </keyword>
+<identifier> i </identifier>
+<symbol> , </symbol>
+<identifier> sum </identifier>
+<symbol> ; </symbol>
+</varDec>
+<statements>
+<letStatement>
+</letStatement>
+<letStatement>
+</letStatement>
+<letStatement>
+</letStatement>
+<whileStatement>
+</whileStatement>
+<letStatement>
+</letStatement>
+<letStatement>
+</letStatement>
+<whileStatement>
+</whileStatement>
+<doStatement>
+</doStatement>
+<doStatement>
+</doStatement>
+<doStatement>
+</doStatement>
+<returnStatement>
+</returnStatement>
+</statements>
+<symbol> } </symbol>
 </subroutineBody>
 </subroutineDec>
 <symbol> } </symbol>
