@@ -257,7 +257,7 @@ def parseExpression(tokensWithTypes):
 	term = parseTerm(tokensWithTypes)
 	expressionNode.children.append(term)
 
-	while tokensWithTypes.value[0] in OPERATORS:
+	while tokensWithTypes[0].value in OPERATORS:
 		operator = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=OPERATORS)
 		term = parseTerm(tokensWithTypes)
 		expressionNode.children.append(operator)
@@ -269,20 +269,41 @@ def parseExpression(tokensWithTypes):
 def parseSubroutineCall(tokensWithTypes):
 	nodeList = []
 
-	#TODO : Cas 2 pdf page 16 (className/varName . subroutineName)
+	if tokensWithTypes[1].value == ".":
+		objectName = takeNode(tokensWithTypes, expectedType="identifier")
+		dot = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["."])
+		nodeList += [objectName, dot]
 
 	subroutineName = takeNode(tokensWithTypes, expectedType="identifier")
-
 	symbolOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["("])
 	expressionList = parseExpressionList(tokensWithTypes)
 	symbolClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[")"])
-
+	nodeList += [subroutineName, symbolOpen, expressionList, symbolClose]
 	return nodeList
 
 
 def parseExpressionList(tokensWithTypes):
-	#TODO
-	return
+	expressionListNode = Node("expressionList")
+
+	if hasExpression(tokensWithTypes):
+		expressionNode = parseExpression(tokensWithTypes)
+		expressionListNode.children.append(expressionNode)
+
+		while hasComma(tokensWithTypes):
+			commaNode = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[","])
+			expressionNode = parseExpression(tokensWithTypes)
+			expressionListNode.children.append(commaNode)
+			expressionListNode.children.append(expressionNode)
+
+	return expressionListNode
+
+
+def hasExpression(tokensWithTypes):
+	return tokensWithTypes[0].value != ")"
+
+
+def hasComma(tokensWithTypes):
+	return tokensWithTypes[0].value == ","
 
 
 def parseTerm(tokensWithTypes):
