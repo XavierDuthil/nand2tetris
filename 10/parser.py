@@ -1,0 +1,347 @@
+from Node import Node
+from contextlib import suppress
+from Exceptions import JackSyntaxError
+
+BUILT_IN_TYPES = ["int", "char", "boolean"]
+OPERATORS = ["+", "-", "*", "/", "&", "|", "<", ">", "="]
+UNARY_OPERATORS = ["-", "~"]
+
+
+def parseFile(tokensWithTypes):
+	classNode = parseClass(tokensWithTypes)
+
+	if tokensWithTypes:
+		raise Exception("Syntax error. Class ended, found {}".format(tokensWithTypes[0]))
+
+	return classNode
+
+
+def parseClass(tokensWithTypes):
+	classNode = Node("class")
+
+	keyword = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["class"])
+	identifier = takeNode(tokensWithTypes, expectedType="identifier")
+	symbolOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["{"])
+	classNode.children = [keyword, identifier, symbolOpen]
+
+	for classVarDec in parseClassVarDec(tokensWithTypes):
+		classNode.children.append(classVarDec)
+
+	while hasSubroutineDec(tokensWithTypes):
+		subroutineDecNode = parseSubroutineDec(tokensWithTypes)
+		classNode.children.append(subroutineDecNode)
+
+	symbolClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["}"])
+	classNode.children.append(symbolClose)
+
+	return classNode
+
+
+def parseClassVarDec(tokensWithTypes):
+
+	#TEMP
+	return []
+
+
+def hasSubroutineDec(tokensWithTypes):
+	firstValues = ["constructor", "function", "method"]
+	return tokensWithTypes[0].value in firstValues
+
+
+def hasParameter(tokensWithTypes):
+	tokenType = tokensWithTypes[0].type
+	tokenValue = tokensWithTypes[0].value
+
+	if tokenType == "keyword" and tokenValue in BUILT_IN_TYPES:
+		return True
+	elif tokenType == "identifier":
+		return True
+
+	return False
+
+
+def parseSubroutineDec(tokensWithTypes):
+	possibleValues = ["constructor", "function", "method"]
+	subroutineDecNode = Node("subroutineDec")
+
+	keyword = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=possibleValues)
+
+	returnType = parseType(tokensWithTypes, extraTypes=["void"])
+
+	subroutineName = takeNode(tokensWithTypes, expectedType="identifier")
+	symbolParenthesisOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["("])
+
+	parameterList = parseParameterList(tokensWithTypes)
+
+	symbolParenthesisClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[")"])
+	subroutineBody = parseSubroutineBody(tokensWithTypes)
+
+	subroutineDecNode.children.append(keyword)
+	subroutineDecNode.children.append(returnType)
+	subroutineDecNode.children.append(subroutineName)
+	subroutineDecNode.children.append(symbolParenthesisOpen)
+	subroutineDecNode.children.append(parameterList)
+	subroutineDecNode.children.append(symbolParenthesisClose)
+	subroutineDecNode.children.append(subroutineBody)
+
+	return subroutineDecNode
+
+
+def parseParameterList(tokensWithTypes):
+	parameterListNode = Node("parameterList")
+
+	# For each parameter :
+	while hasParameter(tokensWithTypes):
+		# Type handling
+		varType = parseType(tokensWithTypes)
+
+		# Variable name handling
+		varName = takeNode(tokensWithTypes, expectedType="identifier")
+
+		parameterListNode.children.append(varType)
+		parameterListNode.children.append(varName)
+
+		# Comma handling
+		with suppress(JackSyntaxError):
+			commaNode = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[","])
+			parameterListNode.children.append(commaNode)
+
+	return parameterListNode
+
+
+def parseType(tokensWithTypes, extraTypes=None):
+	extraTypes = extraTypes or []
+
+	try:
+		varType = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=extraTypes+BUILT_IN_TYPES)
+	except JackSyntaxError:
+		varType = takeNode(tokensWithTypes, expectedType="identifier")
+
+	return varType
+
+
+def parseSubroutineBody(tokensWithTypes):
+	# TEMP : prend tout, pour tester
+	subroutineBodyNode = Node("subroutineBody")
+
+	symbolOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["{"])
+	subroutineBodyNode.children.append(symbolOpen)
+
+	while hasVarDec(tokensWithTypes):
+		varDecNode = parseVarDec(tokensWithTypes)
+		subroutineBodyNode.children.append(varDecNode)
+
+	statements = parseStatements(tokensWithTypes)
+	symbolClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["}"])
+	subroutineBodyNode.children.append(statements)
+	subroutineBodyNode.children.append(symbolClose)
+
+	return subroutineBodyNode
+
+
+def hasVarDec(tokensWithTypes):
+	return tokensWithTypes[0].value == "var"
+
+
+def parseVarDec(tokensWithTypes):
+	varDecNode = Node("varDec")
+
+	varKeyword = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["var"])
+	varType = parseType(tokensWithTypes)
+	varName = takeNode(tokensWithTypes, expectedType="identifier")
+	varDecNode.children.append(varKeyword)
+	varDecNode.children.append(varType)
+	varDecNode.children.append(varName)
+
+	while tokensWithTypes[0].value == ',':
+		comma = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[","])
+		varName = takeNode(tokensWithTypes, expectedType="identifier")
+		varDecNode.children.append(comma)
+		varDecNode.children.append(varName)
+
+	semicolon = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[";"])
+	varDecNode.children.append(semicolon)
+
+	return varDecNode
+
+
+def parseStatements(tokensWithTypes):
+	statementsNode = Node("statements")
+	statementMapping = {
+		"let": parseLetStatement,
+		"if": parseIfStatement,
+		"while": parseWhileStatement,
+		"do": parseDoStatement,
+		"return": parseReturnStatement
+	}
+
+	while hasStatement(tokensWithTypes):
+		keyword = tokensWithTypes[0].value
+		statement = statementMapping[keyword](tokensWithTypes)
+		statementsNode.children.append(statement)
+
+	return statementsNode
+
+
+def hasStatement(tokensWithTypes):
+	return tokensWithTypes[0].value in ["let", "if", "while", "do", "return"]
+
+
+def parseLetStatement(tokensWithTypes):
+	statementNode = Node("letStatement")
+
+	letKeyword = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["let"])
+	varName = takeNode(tokensWithTypes, expectedType="identifier")
+	statementNode.children.append(letKeyword)
+	statementNode.children.append(varName)
+
+	if tokensWithTypes[0].value == "[":
+		bracketOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["["])
+		expression = parseExpression(tokensWithTypes)
+		bracketClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["]"])
+		statementNode.children.append(bracketOpen)
+		statementNode.children.append(expression)
+		statementNode.children.append(bracketClose)
+
+	letKeyword = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["="])
+	expression = parseExpression(tokensWithTypes)
+	statementNode.children.append(letKeyword)
+	statementNode.children.append(expression)
+
+	return statementNode
+
+
+def parseIfStatement(tokensWithTypes):
+	statementNode = Node("ifStatement")
+	#TODO
+	return statementNode
+
+
+def parseWhileStatement(tokensWithTypes):
+	statementNode = Node("whileStatement")
+
+	#TEMP
+	while tokensWithTypes[0].value != "}":
+		tokensWithTypes.pop(0)
+
+	tokensWithTypes.pop(0)
+	return statementNode
+
+
+def parseDoStatement(tokensWithTypes):
+	statementNode = Node("doStatement")
+
+	doKeyword = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["do"])
+	statementNode.children.append(doKeyword)
+	statementNode.children += parseSubroutineCall(tokensWithTypes)
+	symbolClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[";"])
+	statementNode.children.append(symbolClose)
+
+	return statementNode
+
+
+def parseReturnStatement(tokensWithTypes):
+	statementNode = Node("returnStatement")
+
+	#TEMP
+	while tokensWithTypes[0].value != ";":
+		tokensWithTypes.pop(0)
+
+	tokensWithTypes.pop(0)
+	return statementNode
+
+
+def parseExpression(tokensWithTypes):
+	expressionNode = Node("expression")
+
+	term = parseTerm(tokensWithTypes)
+	expressionNode.children.append(term)
+
+	while tokensWithTypes.value[0] in OPERATORS:
+		operator = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=OPERATORS)
+		term = parseTerm(tokensWithTypes)
+		expressionNode.children.append(operator)
+		expressionNode.children.append(term)
+
+	return expressionNode
+
+
+def parseSubroutineCall(tokensWithTypes):
+	nodeList = []
+
+	#TODO : Cas 2 pdf page 16 (className/varName . subroutineName)
+
+	subroutineName = takeNode(tokensWithTypes, expectedType="identifier")
+
+	symbolOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["("])
+	expressionList = parseExpressionList(tokensWithTypes)
+	symbolClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[")"])
+
+	return nodeList
+
+
+def parseExpressionList(tokensWithTypes):
+	#TODO
+	return
+
+
+def parseTerm(tokensWithTypes):
+	termNode = Node("term")
+
+	firstNode = tokensWithTypes[0]
+
+	if firstNode.type in ("integerConstant", "stringConstant"):
+		constant = Node(firstNode.type, firstNode.value)
+		tokensWithTypes.pop(0)
+		termNode.children.append(constant)
+
+	elif firstNode.type == "keyword" and firstNode.value in ("true", "false", "null", "this"):
+		constant = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["true", "false", "null", "this"])
+		termNode.children.append(constant)
+
+	elif firstNode.value == "(":
+		symbolOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["("])
+		expression = parseExpression(tokensWithTypes)
+		symbolClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[")"])
+		termNode.children.append(symbolOpen)
+		termNode.children.append(expression)
+		termNode.children.append(symbolClose)
+
+	elif firstNode.value == UNARY_OPERATORS:
+		unaryOp = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=UNARY_OPERATORS)
+		term = parseTerm(tokensWithTypes)
+		termNode.children.append(unaryOp)
+		termNode.children.append(term)
+
+	elif firstNode.type == "identifier":
+		try:
+			subroutineCallNodes = parseSubroutineCall(tokensWithTypes)
+			termNode.children += subroutineCallNodes
+
+		# If exception : not a subroutineCall, but a varName
+		except JackSyntaxError:
+			varName = takeNode(tokensWithTypes, expectedType="identifier")
+			termNode.children.append(varName)
+
+			if tokensWithTypes[0].value == "[":
+				symbolOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["["])
+				expression = parseExpression(tokensWithTypes)
+				symbolClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["]"])
+				termNode.children.append(symbolOpen)
+				termNode.children.append(expression)
+				termNode.children.append(symbolClose)
+
+	return termNode
+
+
+# Pop the first token from the list, verify condition and return as Node
+def takeNode(tokensWithTypes, expectedType, possibleValues=None):
+	currentToken = tokensWithTypes[0]
+
+	if currentToken.type != expectedType:
+		raise JackSyntaxError("Syntax error. Expected type {0}, found type {1} (value : '{2}')".format(expectedType, currentToken.type, currentToken.value))
+
+	if possibleValues is not None and currentToken.value not in possibleValues:
+		raise JackSyntaxError("Syntax error. Expected values '{0}', found value '{1}'".format(possibleValues, currentToken.value))
+
+	return Node.fromToken(tokensWithTypes.pop(0))
