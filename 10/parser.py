@@ -222,11 +222,23 @@ def parseIfStatement(tokensWithTypes):
 def parseWhileStatement(tokensWithTypes):
 	statementNode = Node("whileStatement")
 
-	#TEMP
-	while tokensWithTypes[0].value != "}":
-		tokensWithTypes.pop(0)
+	whileKeyword = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["while"])
+	openParenthesis = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["("])
+	conditionNode = parseExpression(tokensWithTypes)
+	closeParenthesis = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[")"])
 
-	tokensWithTypes.pop(0)
+	openBracket = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["{"])
+	body = parseStatements(tokensWithTypes)
+	closeBracket = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["}"])
+
+	statementNode.children.append(whileKeyword)
+	statementNode.children.append(openParenthesis)
+	statementNode.children.append(conditionNode)
+	statementNode.children.append(closeParenthesis)
+	statementNode.children.append(openBracket)
+	statementNode.children.append(body)
+	statementNode.children.append(closeBracket)
+
 	return statementNode
 
 
