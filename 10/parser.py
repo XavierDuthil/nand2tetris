@@ -245,11 +245,16 @@ def parseDoStatement(tokensWithTypes):
 def parseReturnStatement(tokensWithTypes):
 	statementNode = Node("returnStatement")
 
-	#TEMP
-	while tokensWithTypes[0].value != ";":
-		tokensWithTypes.pop(0)
+	returnStatement = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["return"])
+	statementNode.children.append(returnStatement)
 
-	tokensWithTypes.pop(0)
+	if tokensWithTypes[0].value != ";":
+		expressionNode = parseExpression(tokensWithTypes)
+		statementNode.children.append(expressionNode)
+
+	symbolClose = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[";"])
+	statementNode.children.append(symbolClose)
+
 	return statementNode
 
 
