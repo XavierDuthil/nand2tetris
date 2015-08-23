@@ -392,7 +392,7 @@ def parseTerm(tokensWithTypes):
 		termNode.children.append(expression)
 		termNode.children.append(symbolClose)
 
-	elif firstNode.value == UNARY_OPERATORS:
+	elif firstNode.value in UNARY_OPERATORS:
 		unaryOp = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=UNARY_OPERATORS)
 		term = parseTerm(tokensWithTypes)
 		termNode.children.append(unaryOp)
