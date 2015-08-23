@@ -24,8 +24,9 @@ def parseClass(tokensWithTypes):
 	symbolOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["{"])
 	classNode.children = [keyword, identifier, symbolOpen]
 
-	for classVarDec in parseClassVarDec(tokensWithTypes):
-		classNode.children.append(classVarDec)
+	while hasClassVarDec(tokensWithTypes):
+		classVarDecNode = parseClassVarDec(tokensWithTypes)
+		classNode.children.append(classVarDecNode)
 
 	while hasSubroutineDec(tokensWithTypes):
 		subroutineDecNode = parseSubroutineDec(tokensWithTypes)
@@ -35,12 +36,6 @@ def parseClass(tokensWithTypes):
 	classNode.children.append(symbolClose)
 
 	return classNode
-
-
-def parseClassVarDec(tokensWithTypes):
-
-	#TEMP
-	return []
 
 
 def hasSubroutineDec(tokensWithTypes):
@@ -121,7 +116,6 @@ def parseType(tokensWithTypes, extraTypes=None):
 
 
 def parseSubroutineBody(tokensWithTypes):
-	# TEMP : prend tout, pour tester
 	subroutineBodyNode = Node("subroutineBody")
 
 	symbolOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["{"])
@@ -143,13 +137,34 @@ def hasVarDec(tokensWithTypes):
 	return tokensWithTypes[0].value == "var"
 
 
+def hasClassVarDec(tokensWithTypes):
+	return tokensWithTypes[0].value in ("field", "static")
+
+
 def parseVarDec(tokensWithTypes):
 	varDecNode = Node("varDec")
 
 	varKeyword = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["var"])
+	varDecNode.children.append(varKeyword)
+
+	varDecNode = _parseVarDecTypeNames(tokensWithTypes, varDecNode)
+	return varDecNode
+
+
+def parseClassVarDec(tokensWithTypes):
+	classVarDecNode = Node("classVarDec")
+
+	scope = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["field", "static"])
+	classVarDecNode.children.append(scope)
+
+	classVarDecNode = _parseVarDecTypeNames(tokensWithTypes, classVarDecNode)
+	return classVarDecNode
+
+
+def _parseVarDecTypeNames(tokensWithTypes, varDecNode):
 	varType = parseType(tokensWithTypes)
 	varName = takeNode(tokensWithTypes, expectedType="identifier")
-	varDecNode.children.append(varKeyword)
+
 	varDecNode.children.append(varType)
 	varDecNode.children.append(varName)
 
@@ -161,7 +176,6 @@ def parseVarDec(tokensWithTypes):
 
 	semicolon = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[";"])
 	varDecNode.children.append(semicolon)
-
 	return varDecNode
 
 
@@ -215,7 +229,35 @@ def parseLetStatement(tokensWithTypes):
 
 def parseIfStatement(tokensWithTypes):
 	statementNode = Node("ifStatement")
-	#TODO
+
+	ifKeyword = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["if"])
+	openParenthesis = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["("])
+	conditionNode = parseExpression(tokensWithTypes)
+	closeParenthesis = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[")"])
+
+	openBracket = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["{"])
+	body = parseStatements(tokensWithTypes)
+	closeBracket = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["}"])
+
+	statementNode.children.append(ifKeyword)
+	statementNode.children.append(openParenthesis)
+	statementNode.children.append(conditionNode)
+	statementNode.children.append(closeParenthesis)
+	statementNode.children.append(openBracket)
+	statementNode.children.append(body)
+	statementNode.children.append(closeBracket)
+
+	if tokensWithTypes[0].value == "else":
+		elseKeyword = takeNode(tokensWithTypes, expectedType="keyword", possibleValues=["else"])
+		openBracket = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["{"])
+		elseBody = parseStatements(tokensWithTypes)
+		closeBracket = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["}"])
+
+		statementNode.children.append(elseKeyword)
+		statementNode.children.append(openBracket)
+		statementNode.children.append(elseBody)
+		statementNode.children.append(closeBracket)
+
 	return statementNode
 
 
@@ -386,5 +428,7 @@ def takeNode(tokensWithTypes, expectedType, possibleValues=None):
 
 	if possibleValues is not None and currentToken.value not in possibleValues:
 		raise JackSyntaxError("Syntax error. Expected values '{0}', found value '{1}'".format(possibleValues, currentToken.value))
+
+	print(tokensWithTypes[0].value)
 
 	return Node.fromToken(tokensWithTypes.pop(0))

@@ -1,5 +1,4 @@
-<tokens>
-<keyword> class </keyword>
+<tokens><keyword> class </keyword>
 <identifier> Square </identifier>
 <symbol> { </symbol>
 <keyword> field </keyword>

@@ -6,6 +6,9 @@ from collections import namedtuple
 
 Token = namedtuple("Token", ["type", "value"])
 REGEX_TOKEN_TYPE_IDENTIFIER = re.compile('[a-zA-Z_]\w*')
+KNOWN_KEYWORDS = ("class", "constructor", "function", "method", "field", "static", "var", "int", "char", "boolean",
+		"void", "true", "false", "null", "this", "let", "do", "if", "else", "while", "return", )
+KNOWN_SYMBOLS = ("{", "}", "(", ")", "[", "]", ".", ",", ";", "+", "-", "*", "/", "&", "|", "<", ">", "=", "~", )
 
 
 def tokenize(jackProgram):
@@ -53,16 +56,13 @@ def tokenize(jackProgram):
 
 
 def analyseTokenType(tokenList):
-	knownKeywords = ("class", "constructor", "function", "method", "field", "static", "var", "int", "char", "boolean",
-		"void", "true", "false", "null", "this", "let", "do", "if", "else", "while", "return", )
-	knownSymbols = ("{", "}", "(", ")", "[", "]", ".", ",", ";", "+", "-", "*", "/", "&", "|", "<", ">", "=", "~", )
 	tokensWithTypes = []
 
 	for token in tokenList:
-		if token in knownKeywords:
+		if token in KNOWN_KEYWORDS:
 			tokenType = "keyword"
 
-		elif token in knownSymbols:
+		elif token in KNOWN_SYMBOLS:
 			tokenType = "symbol"
 
 		elif token.isdigit() and 0 <= int(token) <= 32767:

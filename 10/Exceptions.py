@@ -1,3 +1,2 @@
 class JackSyntaxError(ValueError):
 	pass
-		
