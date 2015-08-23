@@ -205,8 +205,10 @@ def parseLetStatement(tokensWithTypes):
 
 	letKeyword = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["="])
 	expression = parseExpression(tokensWithTypes)
+	semicolon = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=[";"])
 	statementNode.children.append(letKeyword)
 	statementNode.children.append(expression)
+	statementNode.children.append(semicolon)
 
 	return statementNode
 
@@ -273,6 +275,9 @@ def parseSubroutineCall(tokensWithTypes):
 		objectName = takeNode(tokensWithTypes, expectedType="identifier")
 		dot = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["."])
 		nodeList += [objectName, dot]
+
+	if tokensWithTypes[1].value != "(":
+		raise JackSyntaxError("Expected '(', found '{}'".format(tokensWithTypes[1].value))
 
 	subroutineName = takeNode(tokensWithTypes, expectedType="identifier")
 	symbolOpen = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=["("])
