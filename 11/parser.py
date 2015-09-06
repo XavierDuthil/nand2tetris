@@ -429,6 +429,4 @@ def takeNode(tokensWithTypes, expectedType, possibleValues=None):
 	if possibleValues is not None and currentToken.value not in possibleValues:
 		raise JackSyntaxError("Syntax error. Expected values '{0}', found value '{1}'".format(possibleValues, currentToken.value))
 
-	print(tokensWithTypes[0].value)
-
 	return Node.fromToken(tokensWithTypes.pop(0))

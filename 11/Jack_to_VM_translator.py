@@ -50,13 +50,15 @@ def main():
 		tokenList = tokenize(jackProgram)
 		tokensWithTypes = analyseTokenType(tokenList)
 		XMLTree = tokenListToXML(tokensWithTypes)
-		tokenFile = XMLToText(XMLTree)
-		writeFile(tokenFile, jackFile.replace(".jack", "T.xml"))
+		#tokenFile = XMLToText(XMLTree)
+		#writeFile(tokenFile, jackFile.replace(".jack", "T.xml"))
 
 		syntaxNode = parseFile(tokensWithTypes)
 		XMLTree = NodeToXML(syntaxNode)
 		syntaxFile = XMLToText(XMLTree)
 		writeFile(syntaxFile, jackFile.replace(".jack", ".xml"))
+
+		vmFile = XMLToVM(XMLTree)
 
 if __name__ == "__main__":
 	time1 = time.time()
