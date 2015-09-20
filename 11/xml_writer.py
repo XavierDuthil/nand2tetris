@@ -29,7 +29,7 @@ def XMLToText(XMLTree):
 def createXMLNode(type, value):
 	XMLNode = ET.Element(type)
 	if value:
-		XMLNode.text = " {} ".format(value)
+		XMLNode.text = value
 	else:
 		XMLNode.text = "\n"
 

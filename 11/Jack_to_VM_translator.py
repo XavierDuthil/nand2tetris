@@ -3,6 +3,7 @@ import time
 import argparse
 from tokenizer import tokenize, analyseTokenType
 from xml_writer import tokenListToXML, XMLToText, NodeToXML
+from compiler import XMLToVM
 from parser import parseFile
 
 #REGEX_FIRST_WORD = re.compile('^([^ ]*)')
@@ -59,6 +60,7 @@ def main():
 		writeFile(syntaxFile, jackFile.replace(".jack", ".xml"))
 
 		vmFile = XMLToVM(XMLTree)
+		writeFile(vmFile, jackFile.replace(".jack", ".vm"))
 
 if __name__ == "__main__":
 	time1 = time.time()
