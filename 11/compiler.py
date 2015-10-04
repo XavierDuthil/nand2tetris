@@ -51,5 +51,40 @@ def parseDoStatement(vmFile, xmlElement):
 
 
 def parseExpression(vmFile, xmlElement):
-	#TODO
-	pass
+	term1 = xmlElement[0]
+	parseTerm(vmFile, term1)
+
+	if len(xmlElement) > 1:
+		operator = xmlElement[1].text
+		term2 = xmlElement[2]
+		parseTerm(vmFile, term2)
+
+		if operator == '+':
+			vmFile.append('add')
+		elif operator == '-':
+			vmFile.append('sub')
+
+		''' TODO
+		elif operator == '*':
+			
+		'''
+
+
+
+
+
+def parseTerm(vmFile, xmlElement):
+	if len(xmlElement) == 1:
+		value = xmlElement[0].text
+		if xmlElement[0].tag == 'integerConstant':
+			vmFile.append('push constant {}'.format(value))
+
+		""" TODO
+		elif xmlElement.tag == 'stringConstant':
+		elif xmlElement.tag == 'keywordConstant':
+		elif xmlElement.tag == 'varName':
+		etc...
+
+
+	else:
+		"""
