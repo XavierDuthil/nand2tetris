@@ -1,10 +1,16 @@
+import textwrap
+
 def XMLToVM(XMLTree):
 	vmFile = []
+	parseClass(vmFile, XMLTree)
+	return "\n".join(vmFile)
 
-	fileClass = XMLTree
+def parseClass(vmFile, xmlElement):
+	fileClass = xmlElement
 	className = fileClass.find('identifier').text
 
 	# TODO : find classVarDec
+
 
 	for function in fileClass.findall('subroutineDec'):
 		functionName = function.find('identifier').text
@@ -25,8 +31,6 @@ def XMLToVM(XMLTree):
 
 			elif instruction.tag == 'returnStatement':
 				parseReturnStatement(vmFile, instruction)
-
-	return "\n".join(vmFile)
 
 
 def parseReturnStatement(vmFile, xmlElement):
@@ -63,15 +67,38 @@ def parseExpression(vmFile, xmlElement):
 			vmFile.append('add')
 		elif operator == '-':
 			vmFile.append('sub')
-
-		''' TODO
 		elif operator == '*':
+			instructions = textwrap.dedent('''\
+				// We already have the 2 operands in the stack, we store them in temp0 and temp1
+				pop temp 0
+				pop temp 1
+
+				// Result initialisation
+				push constant 0
+
+				// Loop
+				label MULTIPLICATION_LOOP
 			
-		'''
+					// Counter decrement
+					push temp 1
+					push constant 1
+					sub
+					pop temp 1
 
+					// Verify loop condition: until counter < 0
+					push temp 1
+					push constant 0
+					lt
+					if-goto MULTIPLICATION_END
 
+					// Add first term value
+					push temp 0
+					add
 
+					goto MULTIPLICATION_LOOP
 
+				label MULTIPLICATION_END''').format(term1=term1.text, term2=term2.text)
+			vmFile.extend(instructions.split("\n"))
 
 def parseTerm(vmFile, xmlElement):
 	if len(xmlElement) == 1:
@@ -83,8 +110,9 @@ def parseTerm(vmFile, xmlElement):
 		elif xmlElement.tag == 'stringConstant':
 		elif xmlElement.tag == 'keywordConstant':
 		elif xmlElement.tag == 'varName':
-		etc...
 
+		etc..."""
 
-	else:
-		"""
+	elif len(xmlElement) == 3:
+		if xmlElement[0].text == '(' and xmlElement[2].text == ')':
+			parseExpression(vmFile, xmlElement[1])
