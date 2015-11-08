@@ -1,4 +1,5 @@
-.PHONY:seven
+.PHONY:average
 
-seven:
-	-python3 Jack_to_VM_translator.py ./Seven/*.jack
+average:
+	-python3 Jack_to_VM_translator.py ./Average/*.jack
+

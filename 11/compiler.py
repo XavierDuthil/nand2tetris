@@ -1,4 +1,5 @@
 import textwrap
+from SymbolTable import SymbolTable
 
 def XMLToVM(XMLTree):
 	vmFile = []
@@ -13,24 +14,33 @@ def parseClass(vmFile, xmlElement):
 
 
 	for function in fileClass.findall('subroutineDec'):
-		functionName = function.find('identifier').text
-		# Parameters...
+		parseFunction(vmFile, function, className)
 
-		# TEMP
-		localVarsCount = 0
-		# /TEMP
+def parseFunction(vmFile, xmlElement, className):
+	function = xmlElement
+	functionName = function.find('identifier').text
+	# Parameters...
 
-		vmFile.append("function {className}.{functionName} {localVarsCount}".format(className=className, functionName=functionName, localVarsCount=localVarsCount))
+	functionBody = function.find('subroutineBody')
 
-		# Instructions
-		functionBody = function.find('subroutineBody')
-		instructions = functionBody.find('statements')
-		for instruction in instructions:
-			if instruction.tag == 'doStatement':
-				parseDoStatement(vmFile, instruction)
+	# Local vars
+	methodSymbolTable = SymbolTable()
+	localVarsCount = 0
+	varDeclarations = functionBody.findall('varDec')
+	for varDeclaration in varDeclarations:
+		parseVarDeclaration(vmFile, varDeclaration, methodSymbolTable)
+		
+	localVarsCount = methodSymbolTable.countSymbols("local")
+	vmFile.append("function {className}.{functionName} {localVarsCount}".format(className=className, functionName=functionName, localVarsCount=localVarsCount))
 
-			elif instruction.tag == 'returnStatement':
-				parseReturnStatement(vmFile, instruction)
+	# Instructions
+	instructions = functionBody.find('statements')
+	for instruction in instructions:
+		if instruction.tag == 'doStatement':
+			parseDoStatement(vmFile, instruction)
+
+		elif instruction.tag == 'returnStatement':
+			parseReturnStatement(vmFile, instruction)
 
 
 def parseReturnStatement(vmFile, xmlElement):
@@ -116,3 +126,15 @@ def parseTerm(vmFile, xmlElement):
 	elif len(xmlElement) == 3:
 		if xmlElement[0].text == '(' and xmlElement[2].text == ')':
 			parseExpression(vmFile, xmlElement[1])
+
+
+def parseVarDeclaration(vmFile, xmlElement, methodSymbolTable):
+	varType = xmlElement[1].text
+	varNames = []
+
+	for varNameNode in xmlElement.findall("identifier"):
+		varName = varNameNode.text
+		if varName == varType:
+			continue
+
+		methodSymbolTable.addSymbol(varName, varType, "local")
