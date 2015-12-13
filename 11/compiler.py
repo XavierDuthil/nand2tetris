@@ -130,8 +130,18 @@ def parseTerm(vmFile, xmlElement, methodSymbolTable):
     # Case: single value
     if len(xmlElement) == 1:
         value = xmlElement[0].text
+
+        # Case: integer
         if xmlElement[0].tag == 'integerConstant':
             vmFile.append('push constant {}'.format(value))
+
+        # Case: boolean value 'true'
+        if xmlElement[0].tag == 'keyword' and xmlElement[0].text == 'true':
+            vmFile.append('push constant 1')
+
+        # Case: boolean value 'false'
+        if xmlElement[0].tag == 'keyword' and xmlElement[0].text == 'false':
+            vmFile.append('push constant 0')
 
         # Case: variable
         elif xmlElement[0].tag == 'identifier':
@@ -143,6 +153,15 @@ def parseTerm(vmFile, xmlElement, methodSymbolTable):
         elif xmlElement.tag == 'keywordConstant':
 
         etc..."""
+
+    # Case: Negative single value
+    elif xmlElement[0].tag == 'symbol' and xmlElement[0].text == '-' and len(xmlElement) == 2:
+        vmFile.append('push constant 0')
+
+        term = xmlElement[1]
+        parseTerm(vmFile, term, methodSymbolTable)
+
+        vmFile.append('sub')
 
     # Case: parenthesis around a expression
     elif len(xmlElement) == 3:
