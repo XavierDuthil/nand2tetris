@@ -1,5 +1,6 @@
 import textwrap
 from SymbolTable import SymbolTable
+from uuid import uuid4
 
 
 def XMLToVM(XMLTree):
@@ -38,6 +39,10 @@ def parseFunction(vmFile, xmlElement, className):
 
     # Instructions
     statements = functionBody.find('statements')
+    parseStatements(vmFile, statements, methodSymbolTable)
+
+
+def parseStatements(vmFile, statements, methodSymbolTable):
     for statement in statements:
         parseStatement(vmFile, statement, methodSymbolTable)
 
@@ -52,9 +57,12 @@ def parseStatement(vmFile, statement, methodSymbolTable):
     elif statement.tag == 'letStatement':
         parseLetStatement(vmFile, statement, methodSymbolTable)
 
+    elif statement.tag == 'whileStatement':
+        parseWhileStatement(vmFile, statement, methodSymbolTable)
+
 
 def parseReturnStatement(vmFile, xmlElement):
-    vmFile.append('return')
+    vmFile.append('return\n')
 
 
 def parseDoStatement(vmFile, xmlElement, methodSymbolTable):
@@ -102,7 +110,7 @@ def parseExpression(vmFile, xmlElement, methodSymbolTable):
                 push constant 0
 
                 // Loop
-                label MULTIPLICATION_LOOP
+                label MULTIPLICATION_LOOP{uuid}
 
                     // Counter decrement
                     push temp 1
@@ -114,15 +122,15 @@ def parseExpression(vmFile, xmlElement, methodSymbolTable):
                     push temp 1
                     push constant 0
                     lt
-                    if-goto MULTIPLICATION_END
+                    if-goto MULTIPLICATION_END{uuid}
 
                     // Add first term value
                     push temp 0
                     add
 
-                    goto MULTIPLICATION_LOOP
+                    goto MULTIPLICATION_LOOP{uuid}
 
-                label MULTIPLICATION_END''').format(term1=term1.text, term2=term2.text)
+                label MULTIPLICATION_END{uuid}''').format(uuid=uuid4())
             vmFile.extend(instructions.split("\n"))
 
 
@@ -194,3 +202,39 @@ def parseLetStatement(vmFile, xmlElement, methodSymbolTable):
 
     symbol = methodSymbolTable.getSymbolByName(symbolName)
     vmFile.append('pop {symbol.segment} {symbol.offset}'.format(symbol=symbol))
+
+
+def parseWhileStatement(vmFile, xmlElement, methodSymbolTable):
+    # Generate uuid for this loop
+    uuid = uuid4()
+
+    # Label for the beginning of loop
+    instructions = textwrap.dedent('''\
+
+    // While loop
+    label WHILE_LOOP{uuid}''').format(uuid=uuid)
+    vmFile.extend(instructions.split("\n"))
+
+    # Push condition result on stack
+    condition = xmlElement.find('expression')
+    parseExpression(vmFile, condition, methodSymbolTable)
+
+    # Condition check
+    instructions = textwrap.dedent('''\
+
+    // Loop condition: test if condition result is 'true', else end the loop
+    push constant 1
+    ne
+    if-goto WHILE_END{uuid}\n''').format(uuid=uuid)
+    vmFile.extend(instructions.split("\n"))
+
+    # Loop body statements
+    statements = xmlElement.find('statements')
+    parseStatements(vmFile, statements, methodSymbolTable)
+
+    # End of loop body
+    instructions = textwrap.dedent('''\
+
+    goto WHILE_LOOP{uuid}
+    label WHILE_END{uuid}''').format(uuid=uuid)
+    vmFile.extend(instructions.split("\n"))
