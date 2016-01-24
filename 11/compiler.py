@@ -22,24 +22,40 @@ def parseClass(vmFile, xmlElement):
 def parseFunction(vmFile, xmlElement, className):
     function = xmlElement
     functionName = function.find('identifier').text
-    # Parameters...
 
+    localVarsCount = countLocalVariablesInFunction(function)
+    vmFile.append("function {className}.{functionName} {localVarsCount}".format(
+        className=className, functionName=functionName, localVarsCount=localVarsCount))
+
+    # Arguments
+    methodSymbolTable = SymbolTable()
+    arguments = function.find('parameterList')
+    parseFunctionArguments(vmFile, arguments, methodSymbolTable)
+
+    # Body
     functionBody = function.find('subroutineBody')
 
     # Local vars
-    methodSymbolTable = SymbolTable()
     localVarsCount = 0
     varDeclarations = functionBody.findall('varDec')
     for varDeclaration in varDeclarations:
         parseVarDeclaration(vmFile, varDeclaration, methodSymbolTable)
 
-    localVarsCount = methodSymbolTable.countSymbols("local")
-    vmFile.append("function {className}.{functionName} {localVarsCount}".format(
-        className=className, functionName=functionName, localVarsCount=localVarsCount))
-
     # Instructions
     statements = functionBody.find('statements')
     parseStatements(vmFile, statements, methodSymbolTable)
+
+
+def parseFunctionArguments(vmFile, xmlElement, methodSymbolTable):
+    arguments = xmlElement
+
+    index = 0
+    while index < len(arguments):
+        argumentType = arguments[index].text
+        argumentName = arguments[index+1].text
+
+        methodSymbolTable.addSymbol(argumentName, argumentType, "argument")
+        index += 3
 
 
 def parseStatements(vmFile, statements, methodSymbolTable):
@@ -190,7 +206,8 @@ def parseVarDeclaration(vmFile, xmlElement, methodSymbolTable):
         if varName == varType:
             continue
 
-        methodSymbolTable.addSymbol(varName, varType, "local")
+        newSymbol = methodSymbolTable.addSymbol(varName, varType, "local")
+        initializeVariable(vmFile, newSymbol)
 
 
 def parseLetStatement(vmFile, xmlElement, methodSymbolTable):
@@ -224,7 +241,8 @@ def parseWhileStatement(vmFile, xmlElement, methodSymbolTable):
 
     // Loop condition: test if condition result is 'true', else end the loop
     push constant 1
-    ne
+    eq
+    not
     if-goto WHILE_END{uuid}\n''').format(uuid=uuid)
     vmFile.extend(instructions.split("\n"))
 
@@ -238,3 +256,19 @@ def parseWhileStatement(vmFile, xmlElement, methodSymbolTable):
     goto WHILE_LOOP{uuid}
     label WHILE_END{uuid}''').format(uuid=uuid)
     vmFile.extend(instructions.split("\n"))
+
+
+def countLocalVariablesInFunction(functionElement):
+    localVarsCount = 0
+
+    for varDec in functionElement.find("subroutineBody").findall("varDec"):
+        # Count the commas in the VarDec block, and add 1 to obtain vars count
+        values = [element.text for element in varDec]
+        localVarsCount += values.count(",") + 1
+
+    return localVarsCount
+
+
+def initializeVariable(vmFile, symbol):
+    vmFile.append('push constant 0')
+    vmFile.append('pop {symbol.segment} {symbol.offset}'.format(symbol=symbol))
