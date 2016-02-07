@@ -76,6 +76,9 @@ def parseStatement(vmFile, statement, methodSymbolTable):
     elif statement.tag == 'whileStatement':
         parseWhileStatement(vmFile, statement, methodSymbolTable)
 
+    elif statement.tag == 'ifStatement':
+        parseIfStatement(vmFile, statement, methodSymbolTable)
+
 
 def parseReturnStatement(vmFile, xmlElement):
     vmFile.append('return\n')
@@ -221,6 +224,34 @@ def parseLetStatement(vmFile, xmlElement, methodSymbolTable):
     vmFile.append('pop {symbol.segment} {symbol.offset}'.format(symbol=symbol))
 
 
+def parseIfStatement(vmFile, xmlElement, methodSymbolTable):
+    # Generate uuid for the end label
+    uuid = uuid4()
+
+    # Parse the condition
+    condition = xmlElement.find('expression')
+    falseLabel = 'IF_FALSE{uuid}'.format(uuid=uuid)
+    parseCondition(vmFile, condition, methodSymbolTable, falseLabel)
+
+    # IF_TRUE body statements
+    ifTrueStatements = xmlElement.findall('statements')[0]
+    parseStatements(vmFile, ifTrueStatements, methodSymbolTable)
+
+    # End of IF_TRUE
+    vmFile.append('goto IF_END{uuid}'.format(uuid=uuid))
+
+    # Beginning of IF_FALSE
+    vmFile.append('label IF_FALSE{uuid}'.format(uuid=uuid))
+
+    # IF_FALSE body statements
+    if len(xmlElement.findall('statements')) > 1:
+        ifFalseStatements = xmlElement.findall('statements')[1]
+        parseStatements(vmFile, ifFalseStatements, methodSymbolTable)
+
+    # End of if
+    vmFile.append('label IF_END{uuid}'.format(uuid=uuid))
+
+
 def parseWhileStatement(vmFile, xmlElement, methodSymbolTable):
     # Generate uuid for this loop
     uuid = uuid4()
@@ -232,19 +263,10 @@ def parseWhileStatement(vmFile, xmlElement, methodSymbolTable):
     label WHILE_LOOP{uuid}''').format(uuid=uuid)
     vmFile.extend(instructions.split("\n"))
 
-    # Push condition result on stack
+    # Parse the condition
     condition = xmlElement.find('expression')
-    parseExpression(vmFile, condition, methodSymbolTable)
-
-    # Condition check
-    instructions = textwrap.dedent('''\
-
-    // Loop condition: test if condition result is 'true', else end the loop
-    push constant 1
-    eq
-    not
-    if-goto WHILE_END{uuid}\n''').format(uuid=uuid)
-    vmFile.extend(instructions.split("\n"))
+    falseLabel = 'WHILE_END{uuid}'.format(uuid=uuid)
+    parseCondition(vmFile, condition, methodSymbolTable, falseLabel)
 
     # Loop body statements
     statements = xmlElement.find('statements')
@@ -255,6 +277,20 @@ def parseWhileStatement(vmFile, xmlElement, methodSymbolTable):
 
     goto WHILE_LOOP{uuid}
     label WHILE_END{uuid}''').format(uuid=uuid)
+    vmFile.extend(instructions.split("\n"))
+
+
+def parseCondition(vmFile, condition, methodSymbolTable, falseLabel):
+    # Push condition result on stack
+    parseExpression(vmFile, condition, methodSymbolTable)
+
+    # Condition check
+    instructions = textwrap.dedent('''\
+
+    // Loop condition: test if condition result is 'false', then end the loop
+    push constant 0
+    eq
+    if-goto {falseLabel}\n''').format(falseLabel=falseLabel)
     vmFile.extend(instructions.split("\n"))
 
 
