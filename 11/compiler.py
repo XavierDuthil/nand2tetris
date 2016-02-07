@@ -107,11 +107,29 @@ def parseSubroutineCall(vmFile, xmlElement, methodSymbolTable):
 
 
 def parseExpression(vmFile, xmlElement, methodSymbolTable):
-    term1 = xmlElement[0]
-    parseTerm(vmFile, term1, methodSymbolTable)
+    if len(xmlElement) == 1:
+        term = xmlElement[0]
+        parseTerm(vmFile, term, methodSymbolTable)
 
-    if len(xmlElement) > 1:
+    elif len(xmlElement) == 2:
+        operator = xmlElement[0]
+        term = xmlElement[1]
+
+        if operator == '~':
+            parseTerm(vmFile, term, methodSymbolTable)
+            vmFile.append('not')
+
+        elif operator == '-':
+            vmFile.append('push constant 0')
+            parseTerm(vmFile, term, methodSymbolTable)
+            vmFile.append('sub')
+
+    elif len(xmlElement) > 2:
+        term1 = xmlElement[0]
+        parseTerm(vmFile, term1, methodSymbolTable)
+
         operator = xmlElement[1].text
+
         term2 = xmlElement[2]
         parseTerm(vmFile, term2, methodSymbolTable)
 
@@ -151,6 +169,12 @@ def parseExpression(vmFile, xmlElement, methodSymbolTable):
 
                 label MULTIPLICATION_END{uuid}''').format(uuid=uuid4())
             vmFile.extend(instructions.split("\n"))
+
+        elif operator == '>':
+            vmFile.append('gt')
+
+        elif operator == '<':
+            vmFile.append('lt')
 
 
 def parseTerm(vmFile, xmlElement, methodSymbolTable):
@@ -287,7 +311,7 @@ def parseCondition(vmFile, condition, methodSymbolTable, falseLabel):
     # Condition check
     instructions = textwrap.dedent('''\
 
-    // Loop condition: test if condition result is 'false', then end the loop
+    // Test if condition result is 'false'
     push constant 0
     eq
     if-goto {falseLabel}\n''').format(falseLabel=falseLabel)
