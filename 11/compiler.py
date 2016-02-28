@@ -68,7 +68,7 @@ def parseStatement(vmFile, statement, methodSymbolTable):
         parseDoStatement(vmFile, statement, methodSymbolTable)
 
     elif statement.tag == 'returnStatement':
-        parseReturnStatement(vmFile, statement)
+        parseReturnStatement(vmFile, statement, methodSymbolTable)
 
     elif statement.tag == 'letStatement':
         parseLetStatement(vmFile, statement, methodSymbolTable)
@@ -80,7 +80,10 @@ def parseStatement(vmFile, statement, methodSymbolTable):
         parseIfStatement(vmFile, statement, methodSymbolTable)
 
 
-def parseReturnStatement(vmFile, xmlElement):
+def parseReturnStatement(vmFile, xmlElement, methodSymbolTable):
+    if xmlElement[1].tag == 'expression':
+        parseExpression(vmFile, xmlElement[1], methodSymbolTable)
+
     vmFile.append('return\n')
 
 
@@ -173,9 +176,15 @@ def parseExpression(vmFile, xmlElement, methodSymbolTable):
 
         elif operator == '>':
             vmFile.append('gt')
-
         elif operator == '<':
             vmFile.append('lt')
+        elif operator == '=':
+            vmFile.append('eq')
+        elif operator == '&':
+            vmFile.append('and')
+        elif operator == '|':
+            vmFile.append('or')
+
 
 
 def parseTerm(vmFile, xmlElement, methodSymbolTable):
