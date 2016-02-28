@@ -111,8 +111,9 @@ def parseExpression(vmFile, xmlElement, methodSymbolTable):
         term = xmlElement[0]
         parseTerm(vmFile, term, methodSymbolTable)
 
+    # Unary operator
     elif len(xmlElement) == 2:
-        operator = xmlElement[0]
+        operator = xmlElement[0].text
         term = xmlElement[1]
 
         if operator == '~':
