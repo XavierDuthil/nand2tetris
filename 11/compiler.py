@@ -6,6 +6,7 @@ class Compiler:
     def __init__(self):
         self.vmFile = []
         self.currentMethodSymbolTable = None
+        self.currentClassSymbolTable = None
         self.labelUniqueID = 0
 
     def XMLToVM(self, XMLTree):
@@ -16,7 +17,9 @@ class Compiler:
         fileClass = xmlElement
         className = fileClass.find('identifier').text
 
-        # TODO : find classVarDec
+        self.currentClassSymbolTable = SymbolTable()
+        for classVarDec in fileClass.findall('classVarDec'):
+            self.parseVarDeclaration(classVarDec)
 
         for function in fileClass.findall('subroutineDec'):
             self.parseFunction(function, className)
@@ -190,16 +193,17 @@ class Compiler:
                 self.vmFile.append('push constant {}'.format(value))
 
             # Case: boolean value 'true'
-            if xmlElement[0].tag == 'keyword' and xmlElement[0].text == 'true':
+            if xmlElement[0].tag == 'keyword' and value == 'true':
                 self.vmFile.append('push constant 1')
 
             # Case: boolean value 'false'
-            if xmlElement[0].tag == 'keyword' and xmlElement[0].text == 'false':
+            if xmlElement[0].tag == 'keyword' and value == 'false':
                 self.vmFile.append('push constant 0')
 
             # Case: variable
             elif xmlElement[0].tag == 'identifier':
-                symbol = self.currentMethodSymbolTable.getSymbolByName(xmlElement[0].text)
+                symbol = self.lookupSymbol(value)
+
                 self.vmFile.append('push {symbol.segment} {symbol.offset}'.format(symbol=symbol))
 
             """ TODO
@@ -228,14 +232,25 @@ class Compiler:
             self.parseSubroutineCall(xmlElement)
 
     def parseVarDeclaration(self, xmlElement):
+        variableScope = xmlElement[0].text
         varType = xmlElement[1].text
 
         for varNameNode in xmlElement.findall("identifier"):
             varName = varNameNode.text
+
+            # If the type is an object name (identifier), skip the first identifier occurence
             if varName == varType:
                 continue
 
-            newSymbol = self.currentMethodSymbolTable.addSymbol(varName, varType, "local")
+            if variableScope == "var":
+                newSymbol = self.currentMethodSymbolTable.addSymbol(varName, varType, "local")
+
+            elif variableScope == "field":
+                newSymbol = self.currentClassSymbolTable.addSymbol(varName, varType, "this")
+
+            elif variableScope == "static":
+                newSymbol = self.currentClassSymbolTable.addSymbol(varName, varType, "static")
+
             self.initializeVariable(newSymbol)
 
     def parseLetStatement(self, xmlElement):
@@ -245,7 +260,7 @@ class Compiler:
         expression = xmlElement.findall("expression")[-1]  # Last occurence
         self.parseExpression(expression)
 
-        symbol = self.currentMethodSymbolTable.getSymbolByName(symbolName)
+        symbol = self.lookupSymbol(symbolName)
         self.vmFile.append('pop {symbol.segment} {symbol.offset}'.format(symbol=symbol))
 
     def parseIfStatement(self, xmlElement):
@@ -332,3 +347,13 @@ class Compiler:
     def nextLabelUniqueID(self):
         self.labelUniqueID += 1
         return self.labelUniqueID
+
+    def lookupSymbol(self, symbolName):
+        symbol = self.currentMethodSymbolTable.getSymbolByName(symbolName)
+        if not symbol:
+            symbol = self.currentClassSymbolTable.getSymbolByName(symbolName)
+
+        if not symbol:
+            raise Exception("Unknown variable (not declared ?): {}".format(symbolName))
+
+        return symbol
