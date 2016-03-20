@@ -1,12 +1,12 @@
 import textwrap
 from SymbolTable import SymbolTable
-from uuid import uuid4
 
 
 class Compiler:
     def __init__(self):
         self.vmFile = []
         self.currentMethodSymbolTable = None
+        self.labelUniqueID = 0
 
     def XMLToVM(self, XMLTree):
         self.parseClass(XMLTree)
@@ -146,7 +146,7 @@ class Compiler:
                     push constant 0
 
                     // Loop
-                    label MULTIPLICATION_LOOP{uuid}
+                    label MULTIPLICATION_LOOP{labelID}
 
                         // Counter decrement
                         push temp 1
@@ -158,15 +158,15 @@ class Compiler:
                         push temp 1
                         push constant 0
                         lt
-                        if-goto MULTIPLICATION_END{uuid}
+                        if-goto MULTIPLICATION_END{labelID}
 
                         // Add first term value
                         push temp 0
                         add
 
-                        goto MULTIPLICATION_LOOP{uuid}
+                        goto MULTIPLICATION_LOOP{labelID}
 
-                    label MULTIPLICATION_END{uuid}''').format(uuid=uuid4())
+                    label MULTIPLICATION_END{labelID}''').format(labelID=self.nextLabelUniqueID())
                 self.vmFile.extend(instructions.split("\n"))
 
             elif operator == '>':
@@ -249,12 +249,12 @@ class Compiler:
         self.vmFile.append('pop {symbol.segment} {symbol.offset}'.format(symbol=symbol))
 
     def parseIfStatement(self, xmlElement):
-        # Generate uuid for the end label
-        uuid = uuid4()
+        # Generate labelID for the end label
+        labelID = self.nextLabelUniqueID()
 
         # Parse the condition
         condition = xmlElement.find('expression')
-        falseLabel = 'IF_FALSE{uuid}'.format(uuid=uuid)
+        falseLabel = 'IF_FALSE{labelID}'.format(labelID=labelID)
         self.parseCondition(condition, falseLabel)
 
         # IF_TRUE body statements
@@ -262,10 +262,10 @@ class Compiler:
         self.parseStatements(ifTrueStatements)
 
         # End of IF_TRUE
-        self.vmFile.append('goto IF_END{uuid}'.format(uuid=uuid))
+        self.vmFile.append('goto IF_END{labelID}'.format(labelID=labelID))
 
         # Beginning of IF_FALSE
-        self.vmFile.append('label IF_FALSE{uuid}'.format(uuid=uuid))
+        self.vmFile.append('label IF_FALSE{labelID}'.format(labelID=labelID))
 
         # IF_FALSE body statements
         if len(xmlElement.findall('statements')) > 1:
@@ -273,22 +273,22 @@ class Compiler:
             self.parseStatements(ifFalseStatements)
 
         # End of if
-        self.vmFile.append('label IF_END{uuid}'.format(uuid=uuid))
+        self.vmFile.append('label IF_END{labelID}'.format(labelID=labelID))
 
     def parseWhileStatement(self, xmlElement):
-        # Generate uuid for this loop
-        uuid = uuid4()
+        # Generate labelID for this loop
+        labelID = self.nextLabelUniqueID()
 
         # Label for the beginning of loop
         instructions = textwrap.dedent('''\
 
         // While loop
-        label WHILE_LOOP{uuid}''').format(uuid=uuid)
+        label WHILE_LOOP{labelID}''').format(labelID=labelID)
         self.vmFile.extend(instructions.split("\n"))
 
         # Parse the condition
         condition = xmlElement.find('expression')
-        falseLabel = 'WHILE_END{uuid}'.format(uuid=uuid)
+        falseLabel = 'WHILE_END{labelID}'.format(labelID=labelID)
         self.parseCondition(condition, falseLabel)
 
         # Loop body statements
@@ -298,8 +298,8 @@ class Compiler:
         # End of loop body
         instructions = textwrap.dedent('''\
 
-        goto WHILE_LOOP{uuid}
-        label WHILE_END{uuid}''').format(uuid=uuid)
+        goto WHILE_LOOP{labelID}
+        label WHILE_END{labelID}''').format(labelID=labelID)
         self.vmFile.extend(instructions.split("\n"))
 
     def parseCondition(self, condition, falseLabel):
@@ -328,3 +328,7 @@ class Compiler:
     def initializeVariable(self, symbol):
         self.vmFile.append('push constant 0')
         self.vmFile.append('pop {symbol.segment} {symbol.offset}'.format(symbol=symbol))
+
+    def nextLabelUniqueID(self):
+        self.labelUniqueID += 1
+        return self.labelUniqueID
