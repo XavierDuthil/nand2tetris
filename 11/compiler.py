@@ -3,342 +3,328 @@ from SymbolTable import SymbolTable
 from uuid import uuid4
 
 
-def XMLToVM(XMLTree):
-    vmFile = []
-    parseClass(vmFile, XMLTree)
-    return "\n".join(vmFile)
+class Compiler:
+    def __init__(self):
+        self.vmFile = []
+        self.currentMethodSymbolTable = None
 
+    def XMLToVM(self, XMLTree):
+        self.parseClass(XMLTree)
+        return "\n".join(self.vmFile)
 
-def parseClass(vmFile, xmlElement):
-    fileClass = xmlElement
-    className = fileClass.find('identifier').text
+    def parseClass(self, xmlElement):
+        fileClass = xmlElement
+        className = fileClass.find('identifier').text
 
-    # TODO : find classVarDec
+        # TODO : find classVarDec
 
-    for function in fileClass.findall('subroutineDec'):
-        parseFunction(vmFile, function, className)
+        for function in fileClass.findall('subroutineDec'):
+            self.parseFunction(function, className)
 
+    def parseFunction(self, xmlElement, className):
+        function = xmlElement
+        functionName = function.find('identifier').text
 
-def parseFunction(vmFile, xmlElement, className):
-    function = xmlElement
-    functionName = function.find('identifier').text
+        localVarsCount = self.countLocalVariablesInFunction(function)
+        self.vmFile.append("function {className}.{functionName} {localVarsCount}".format(
+            className=className, functionName=functionName, localVarsCount=localVarsCount))
 
-    localVarsCount = countLocalVariablesInFunction(function)
-    vmFile.append("function {className}.{functionName} {localVarsCount}".format(
-        className=className, functionName=functionName, localVarsCount=localVarsCount))
+        # Arguments
+        self.currentMethodSymbolTable = SymbolTable()
+        arguments = function.find('parameterList')
+        self.parseFunctionArguments(arguments)
 
-    # Arguments
-    methodSymbolTable = SymbolTable()
-    arguments = function.find('parameterList')
-    parseFunctionArguments(vmFile, arguments, methodSymbolTable)
+        # Body
+        functionBody = function.find('subroutineBody')
 
-    # Body
-    functionBody = function.find('subroutineBody')
+        # Local vars
+        localVarsCount = 0
+        varDeclarations = functionBody.findall('varDec')
+        for varDeclaration in varDeclarations:
+            self.parseVarDeclaration(varDeclaration)
 
-    # Local vars
-    localVarsCount = 0
-    varDeclarations = functionBody.findall('varDec')
-    for varDeclaration in varDeclarations:
-        parseVarDeclaration(vmFile, varDeclaration, methodSymbolTable)
+        # Instructions
+        statements = functionBody.find('statements')
+        self.parseStatements(statements)
 
-    # Instructions
-    statements = functionBody.find('statements')
-    parseStatements(vmFile, statements, methodSymbolTable)
+    def parseFunctionArguments(self, xmlElement):
+        arguments = xmlElement
 
+        index = 0
+        while index < len(arguments):
+            argumentType = arguments[index].text
+            argumentName = arguments[index+1].text
 
-def parseFunctionArguments(vmFile, xmlElement, methodSymbolTable):
-    arguments = xmlElement
+            self.currentMethodSymbolTable.addSymbol(argumentName, argumentType, "argument")
+            index += 3
 
-    index = 0
-    while index < len(arguments):
-        argumentType = arguments[index].text
-        argumentName = arguments[index+1].text
+    def parseStatements(self, statements):
+        for statement in statements:
+            self.parseStatement(statement)
 
-        methodSymbolTable.addSymbol(argumentName, argumentType, "argument")
-        index += 3
+    def parseStatement(self, statement):
+        if statement.tag == 'doStatement':
+            self.parseDoStatement(statement)
 
+        elif statement.tag == 'returnStatement':
+            self.parseReturnStatement(statement)
 
-def parseStatements(vmFile, statements, methodSymbolTable):
-    for statement in statements:
-        parseStatement(vmFile, statement, methodSymbolTable)
+        elif statement.tag == 'letStatement':
+            self.parseLetStatement(statement)
 
+        elif statement.tag == 'whileStatement':
+            self.parseWhileStatement(statement)
 
-def parseStatement(vmFile, statement, methodSymbolTable):
-    if statement.tag == 'doStatement':
-        parseDoStatement(vmFile, statement, methodSymbolTable)
+        elif statement.tag == 'ifStatement':
+            self.parseIfStatement(statement)
 
-    elif statement.tag == 'returnStatement':
-        parseReturnStatement(vmFile, statement, methodSymbolTable)
+    def parseReturnStatement(self, xmlElement):
+        if xmlElement[1].tag == 'expression':
+            self.parseExpression(xmlElement[1])
 
-    elif statement.tag == 'letStatement':
-        parseLetStatement(vmFile, statement, methodSymbolTable)
+        self.vmFile.append('return\n')
 
-    elif statement.tag == 'whileStatement':
-        parseWhileStatement(vmFile, statement, methodSymbolTable)
+    def parseDoStatement(self, xmlElement):
+        self.parseSubroutineCall(xmlElement)
 
-    elif statement.tag == 'ifStatement':
-        parseIfStatement(vmFile, statement, methodSymbolTable)
+    def parseSubroutineCall(self, xmlElement):
+        functionName = xmlElement.findall('identifier')[-1].text
 
+        if xmlElement.find('symbol').text == '.':
+            className = xmlElement.find('identifier').text
+            functionName = "{}.{}".format(className, functionName)
 
-def parseReturnStatement(vmFile, xmlElement, methodSymbolTable):
-    if xmlElement[1].tag == 'expression':
-        parseExpression(vmFile, xmlElement[1], methodSymbolTable)
+        expressions = xmlElement.find('expressionList').findall('expression')
+        argsCount = len(expressions)
 
-    vmFile.append('return\n')
+        # Arguments
+        for expression in expressions:
+            self.parseExpression(expression)
 
+        self.vmFile.append('call {functionName} {argsCount}'.format(
+            functionName=functionName, argsCount=argsCount))
 
-def parseDoStatement(vmFile, xmlElement, methodSymbolTable):
-    parseSubroutineCall(vmFile, xmlElement, methodSymbolTable)
+    def parseExpression(self, xmlElement):
+        if len(xmlElement) == 1:
+            term = xmlElement[0]
+            self.parseTerm(term)
 
+        # Unary operator
+        elif len(xmlElement) == 2:
+            operator = xmlElement[0].text
+            term = xmlElement[1]
 
-def parseSubroutineCall(vmFile, xmlElement, methodSymbolTable):
-    functionName = xmlElement.findall('identifier')[-1].text
+            if operator == '~':
+                self.parseTerm(term)
+                self.vmFile.append('not')
 
-    if xmlElement.find('symbol').text == '.':
-        className = xmlElement.find('identifier').text
-        functionName = "{}.{}".format(className, functionName)
+            elif operator == '-':
+                self.vmFile.append('push constant 0')
+                self.parseTerm(term)
+                self.vmFile.append('sub')
 
-    expressions = xmlElement.find('expressionList').findall('expression')
-    argsCount = len(expressions)
+        elif len(xmlElement) > 2:
+            term1 = xmlElement[0]
+            self.parseTerm(term1)
 
-    # Arguments
-    for expression in expressions:
-        parseExpression(vmFile, expression, methodSymbolTable)
+            operator = xmlElement[1].text
 
-    vmFile.append('call {functionName} {argsCount}'.format(
-        functionName=functionName, argsCount=argsCount))
+            term2 = xmlElement[2]
+            self.parseTerm(term2)
 
-
-def parseExpression(vmFile, xmlElement, methodSymbolTable):
-    if len(xmlElement) == 1:
-        term = xmlElement[0]
-        parseTerm(vmFile, term, methodSymbolTable)
-
-    # Unary operator
-    elif len(xmlElement) == 2:
-        operator = xmlElement[0].text
-        term = xmlElement[1]
-
-        if operator == '~':
-            parseTerm(vmFile, term, methodSymbolTable)
-            vmFile.append('not')
-
-        elif operator == '-':
-            vmFile.append('push constant 0')
-            parseTerm(vmFile, term, methodSymbolTable)
-            vmFile.append('sub')
-
-    elif len(xmlElement) > 2:
-        term1 = xmlElement[0]
-        parseTerm(vmFile, term1, methodSymbolTable)
-
-        operator = xmlElement[1].text
-
-        term2 = xmlElement[2]
-        parseTerm(vmFile, term2, methodSymbolTable)
-
-        if operator == '+':
-            vmFile.append('add')
-        elif operator == '-':
-            vmFile.append('sub')
-        elif operator == '*':
-            instructions = textwrap.dedent('''\
-                // We already have the 2 operands in the stack, we store them in temp0 and temp1
-                pop temp 0
-                pop temp 1
-
-                // Result initialisation
-                push constant 0
-
-                // Loop
-                label MULTIPLICATION_LOOP{uuid}
-
-                    // Counter decrement
-                    push temp 1
-                    push constant 1
-                    sub
+            if operator == '+':
+                self.vmFile.append('add')
+            elif operator == '-':
+                self.vmFile.append('sub')
+            elif operator == '*':
+                instructions = textwrap.dedent('''\
+                    // We already have the 2 operands in the stack, we store them in temp0 and temp1
+                    pop temp 0
                     pop temp 1
 
-                    // Verify loop condition: until counter < 0
-                    push temp 1
+                    // Result initialisation
                     push constant 0
-                    lt
-                    if-goto MULTIPLICATION_END{uuid}
 
-                    // Add first term value
-                    push temp 0
-                    add
+                    // Loop
+                    label MULTIPLICATION_LOOP{uuid}
 
-                    goto MULTIPLICATION_LOOP{uuid}
+                        // Counter decrement
+                        push temp 1
+                        push constant 1
+                        sub
+                        pop temp 1
 
-                label MULTIPLICATION_END{uuid}''').format(uuid=uuid4())
-            vmFile.extend(instructions.split("\n"))
+                        // Verify loop condition: until counter < 0
+                        push temp 1
+                        push constant 0
+                        lt
+                        if-goto MULTIPLICATION_END{uuid}
 
-        elif operator == '>':
-            vmFile.append('gt')
-        elif operator == '<':
-            vmFile.append('lt')
-        elif operator == '=':
-            vmFile.append('eq')
-        elif operator == '&':
-            vmFile.append('and')
-        elif operator == '|':
-            vmFile.append('or')
+                        // Add first term value
+                        push temp 0
+                        add
 
+                        goto MULTIPLICATION_LOOP{uuid}
 
+                    label MULTIPLICATION_END{uuid}''').format(uuid=uuid4())
+                self.vmFile.extend(instructions.split("\n"))
 
-def parseTerm(vmFile, xmlElement, methodSymbolTable):
-    # Case: single value
-    if len(xmlElement) == 1:
-        value = xmlElement[0].text
+            elif operator == '>':
+                self.vmFile.append('gt')
+            elif operator == '<':
+                self.vmFile.append('lt')
+            elif operator == '=':
+                self.vmFile.append('eq')
+            elif operator == '&':
+                self.vmFile.append('and')
+            elif operator == '|':
+                self.vmFile.append('or')
 
-        # Case: integer
-        if xmlElement[0].tag == 'integerConstant':
-            vmFile.append('push constant {}'.format(value))
+    def parseTerm(self, xmlElement):
+        # Case: single value
+        if len(xmlElement) == 1:
+            value = xmlElement[0].text
 
-        # Case: boolean value 'true'
-        if xmlElement[0].tag == 'keyword' and xmlElement[0].text == 'true':
-            vmFile.append('push constant 1')
+            # Case: integer
+            if xmlElement[0].tag == 'integerConstant':
+                self.vmFile.append('push constant {}'.format(value))
 
-        # Case: boolean value 'false'
-        if xmlElement[0].tag == 'keyword' and xmlElement[0].text == 'false':
-            vmFile.append('push constant 0')
+            # Case: boolean value 'true'
+            if xmlElement[0].tag == 'keyword' and xmlElement[0].text == 'true':
+                self.vmFile.append('push constant 1')
 
-        # Case: variable
-        elif xmlElement[0].tag == 'identifier':
-            symbol = methodSymbolTable.getSymbolByName(xmlElement[0].text)
-            vmFile.append('push {symbol.segment} {symbol.offset}'.format(symbol=symbol))
+            # Case: boolean value 'false'
+            if xmlElement[0].tag == 'keyword' and xmlElement[0].text == 'false':
+                self.vmFile.append('push constant 0')
 
-        """ TODO
-        elif xmlElement.tag == 'stringConstant':
-        elif xmlElement.tag == 'keywordConstant':
+            # Case: variable
+            elif xmlElement[0].tag == 'identifier':
+                symbol = self.currentMethodSymbolTable.getSymbolByName(xmlElement[0].text)
+                self.vmFile.append('push {symbol.segment} {symbol.offset}'.format(symbol=symbol))
 
-        etc..."""
+            """ TODO
+            elif xmlElement.tag == 'stringConstant':
+            elif xmlElement.tag == 'keywordConstant':
 
-    # Case: Negative single value
-    elif xmlElement[0].tag == 'symbol' and xmlElement[0].text == '-' and len(xmlElement) == 2:
-        vmFile.append('push constant 0')
+            etc..."""
 
-        term = xmlElement[1]
-        parseTerm(vmFile, term, methodSymbolTable)
+        # Case: Negative single value
+        elif xmlElement[0].tag == 'symbol' and xmlElement[0].text == '-' and len(xmlElement) == 2:
+            self.vmFile.append('push constant 0')
 
-        vmFile.append('sub')
+            term = xmlElement[1]
+            self.parseTerm(term)
 
-    # Case: parenthesis around a expression
-    elif len(xmlElement) == 3:
-        if xmlElement[0].text == '(' and xmlElement[2].text == ')':
-            parseExpression(vmFile, xmlElement[1], methodSymbolTable)
+            self.vmFile.append('sub')
 
-    # Case: subroutine call
-    elif (xmlElement[0].tag == "identifier" and xmlElement[1].text == "(" or
-            xmlElement[0].tag == "identifier" and xmlElement[1].text == "."):
-        parseSubroutineCall(vmFile, xmlElement, methodSymbolTable)
+        # Case: parenthesis around a expression
+        elif len(xmlElement) == 3:
+            if xmlElement[0].text == '(' and xmlElement[2].text == ')':
+                self.parseExpression(xmlElement[1])
 
+        # Case: subroutine call
+        elif (xmlElement[0].tag == "identifier" and xmlElement[1].text == "(" or
+                xmlElement[0].tag == "identifier" and xmlElement[1].text == "."):
+            self.parseSubroutineCall(xmlElement)
 
-def parseVarDeclaration(vmFile, xmlElement, methodSymbolTable):
-    varType = xmlElement[1].text
+    def parseVarDeclaration(self, xmlElement):
+        varType = xmlElement[1].text
 
-    for varNameNode in xmlElement.findall("identifier"):
-        varName = varNameNode.text
-        if varName == varType:
-            continue
+        for varNameNode in xmlElement.findall("identifier"):
+            varName = varNameNode.text
+            if varName == varType:
+                continue
 
-        newSymbol = methodSymbolTable.addSymbol(varName, varType, "local")
-        initializeVariable(vmFile, newSymbol)
+            newSymbol = self.currentMethodSymbolTable.addSymbol(varName, varType, "local")
+            self.initializeVariable(newSymbol)
 
+    def parseLetStatement(self, xmlElement):
+        symbolName = xmlElement[1].text
+        # Brackets...
 
-def parseLetStatement(vmFile, xmlElement, methodSymbolTable):
-    symbolName = xmlElement[1].text
-    # Brackets...
+        expression = xmlElement.findall("expression")[-1]  # Last occurence
+        self.parseExpression(expression)
 
-    expression = xmlElement.findall("expression")[-1]  # Last occurence
-    parseExpression(vmFile, expression, methodSymbolTable)
+        symbol = self.currentMethodSymbolTable.getSymbolByName(symbolName)
+        self.vmFile.append('pop {symbol.segment} {symbol.offset}'.format(symbol=symbol))
 
-    symbol = methodSymbolTable.getSymbolByName(symbolName)
-    vmFile.append('pop {symbol.segment} {symbol.offset}'.format(symbol=symbol))
+    def parseIfStatement(self, xmlElement):
+        # Generate uuid for the end label
+        uuid = uuid4()
 
+        # Parse the condition
+        condition = xmlElement.find('expression')
+        falseLabel = 'IF_FALSE{uuid}'.format(uuid=uuid)
+        self.parseCondition(condition, falseLabel)
 
-def parseIfStatement(vmFile, xmlElement, methodSymbolTable):
-    # Generate uuid for the end label
-    uuid = uuid4()
+        # IF_TRUE body statements
+        ifTrueStatements = xmlElement.findall('statements')[0]
+        self.parseStatements(ifTrueStatements)
 
-    # Parse the condition
-    condition = xmlElement.find('expression')
-    falseLabel = 'IF_FALSE{uuid}'.format(uuid=uuid)
-    parseCondition(vmFile, condition, methodSymbolTable, falseLabel)
+        # End of IF_TRUE
+        self.vmFile.append('goto IF_END{uuid}'.format(uuid=uuid))
 
-    # IF_TRUE body statements
-    ifTrueStatements = xmlElement.findall('statements')[0]
-    parseStatements(vmFile, ifTrueStatements, methodSymbolTable)
+        # Beginning of IF_FALSE
+        self.vmFile.append('label IF_FALSE{uuid}'.format(uuid=uuid))
 
-    # End of IF_TRUE
-    vmFile.append('goto IF_END{uuid}'.format(uuid=uuid))
+        # IF_FALSE body statements
+        if len(xmlElement.findall('statements')) > 1:
+            ifFalseStatements = xmlElement.findall('statements')[1]
+            self.parseStatements(ifFalseStatements)
 
-    # Beginning of IF_FALSE
-    vmFile.append('label IF_FALSE{uuid}'.format(uuid=uuid))
+        # End of if
+        self.vmFile.append('label IF_END{uuid}'.format(uuid=uuid))
 
-    # IF_FALSE body statements
-    if len(xmlElement.findall('statements')) > 1:
-        ifFalseStatements = xmlElement.findall('statements')[1]
-        parseStatements(vmFile, ifFalseStatements, methodSymbolTable)
+    def parseWhileStatement(self, xmlElement):
+        # Generate uuid for this loop
+        uuid = uuid4()
 
-    # End of if
-    vmFile.append('label IF_END{uuid}'.format(uuid=uuid))
+        # Label for the beginning of loop
+        instructions = textwrap.dedent('''\
 
+        // While loop
+        label WHILE_LOOP{uuid}''').format(uuid=uuid)
+        self.vmFile.extend(instructions.split("\n"))
 
-def parseWhileStatement(vmFile, xmlElement, methodSymbolTable):
-    # Generate uuid for this loop
-    uuid = uuid4()
+        # Parse the condition
+        condition = xmlElement.find('expression')
+        falseLabel = 'WHILE_END{uuid}'.format(uuid=uuid)
+        self.parseCondition(condition, falseLabel)
 
-    # Label for the beginning of loop
-    instructions = textwrap.dedent('''\
+        # Loop body statements
+        statements = xmlElement.find('statements')
+        self.parseStatements(statements)
 
-    // While loop
-    label WHILE_LOOP{uuid}''').format(uuid=uuid)
-    vmFile.extend(instructions.split("\n"))
+        # End of loop body
+        instructions = textwrap.dedent('''\
 
-    # Parse the condition
-    condition = xmlElement.find('expression')
-    falseLabel = 'WHILE_END{uuid}'.format(uuid=uuid)
-    parseCondition(vmFile, condition, methodSymbolTable, falseLabel)
+        goto WHILE_LOOP{uuid}
+        label WHILE_END{uuid}''').format(uuid=uuid)
+        self.vmFile.extend(instructions.split("\n"))
 
-    # Loop body statements
-    statements = xmlElement.find('statements')
-    parseStatements(vmFile, statements, methodSymbolTable)
+    def parseCondition(self, condition, falseLabel):
+        # Push condition result on stack
+        self.parseExpression(condition)
 
-    # End of loop body
-    instructions = textwrap.dedent('''\
+        # Condition check
+        instructions = textwrap.dedent('''\
 
-    goto WHILE_LOOP{uuid}
-    label WHILE_END{uuid}''').format(uuid=uuid)
-    vmFile.extend(instructions.split("\n"))
+        // Test if condition result is 'false'
+        push constant 0
+        eq
+        if-goto {falseLabel}\n''').format(falseLabel=falseLabel)
+        self.vmFile.extend(instructions.split("\n"))
 
+    def countLocalVariablesInFunction(self, functionElement):
+        localVarsCount = 0
 
-def parseCondition(vmFile, condition, methodSymbolTable, falseLabel):
-    # Push condition result on stack
-    parseExpression(vmFile, condition, methodSymbolTable)
+        for varDec in functionElement.find("subroutineBody").findall("varDec"):
+            # Count the commas in the VarDec block, and add 1 to obtain vars count
+            values = [element.text for element in varDec]
+            localVarsCount += values.count(",") + 1
 
-    # Condition check
-    instructions = textwrap.dedent('''\
+        return localVarsCount
 
-    // Test if condition result is 'false'
-    push constant 0
-    eq
-    if-goto {falseLabel}\n''').format(falseLabel=falseLabel)
-    vmFile.extend(instructions.split("\n"))
-
-
-def countLocalVariablesInFunction(functionElement):
-    localVarsCount = 0
-
-    for varDec in functionElement.find("subroutineBody").findall("varDec"):
-        # Count the commas in the VarDec block, and add 1 to obtain vars count
-        values = [element.text for element in varDec]
-        localVarsCount += values.count(",") + 1
-
-    return localVarsCount
-
-
-def initializeVariable(vmFile, symbol):
-    vmFile.append('push constant 0')
-    vmFile.append('pop {symbol.segment} {symbol.offset}'.format(symbol=symbol))
+    def initializeVariable(self, symbol):
+        self.vmFile.append('push constant 0')
+        self.vmFile.append('pop {symbol.segment} {symbol.offset}'.format(symbol=symbol))
