@@ -1,5 +1,10 @@
 import textwrap
+from contextlib import suppress
 from SymbolTable import SymbolTable
+
+
+class NoSuchSymbol(Exception):
+    pass
 
 
 class Compiler:
@@ -17,25 +22,32 @@ class Compiler:
         fileClass = xmlElement
         className = fileClass.find('identifier').text
 
+        self.currentClassName = className
         self.currentClassSymbolTable = SymbolTable()
         for classVarDec in fileClass.findall('classVarDec'):
             self.parseVarDeclaration(classVarDec)
 
         for function in fileClass.findall('subroutineDec'):
-            self.parseFunction(function, className)
+            self.parseMethod(function)
 
-    def parseFunction(self, xmlElement, className):
+    def parseMethod(self, xmlElement):
         function = xmlElement
-        functionName = function.find('identifier').text
+        methodName = function[2].text
 
         localVarsCount = self.countLocalVariablesInFunction(function)
-        self.vmFile.append("function {className}.{functionName} {localVarsCount}".format(
-            className=className, functionName=functionName, localVarsCount=localVarsCount))
+        self.vmFile.append("function {className}.{methodName} {localVarsCount}".format(
+            className=self.currentClassName, methodName=methodName, localVarsCount=localVarsCount))
+
+        if function[0].text == 'constructor':
+            sizeToAlloc = self.currentClassSymbolTable.countSymbols('this')
+            self.vmFile.append("push constant {}".format(sizeToAlloc))  # Argument for the next call
+            self.vmFile.append("call Memory.alloc 1")  # System call to allocate a given size in ram
+            self.vmFile.append("pop pointer 0")  # Base address for THIS
 
         # Arguments
         self.currentMethodSymbolTable = SymbolTable()
         arguments = function.find('parameterList')
-        self.parseFunctionArguments(arguments)
+        self.parseMethodArguments(arguments)
 
         # Body
         functionBody = function.find('subroutineBody')
@@ -50,7 +62,7 @@ class Compiler:
         statements = functionBody.find('statements')
         self.parseStatements(statements)
 
-    def parseFunctionArguments(self, xmlElement):
+    def parseMethodArguments(self, xmlElement):
         arguments = xmlElement
 
         index = 0
@@ -91,11 +103,22 @@ class Compiler:
         self.parseSubroutineCall(xmlElement)
 
     def parseSubroutineCall(self, xmlElement):
-        functionName = xmlElement.findall('identifier')[-1].text
+        methodName = xmlElement.findall('identifier')[-1].text
+        className = self.currentClassName
 
         if xmlElement.find('symbol').text == '.':
-            className = xmlElement.find('identifier').text
-            functionName = "{}.{}".format(className, functionName)
+            objectName = xmlElement.find('identifier').text
+            className = objectName
+
+            # Load object address into THIS
+            with suppress(NoSuchSymbol):
+                objectInstance = self.lookupSymbol(objectName)
+                className = objectInstance.type
+                command = 'push {obj.segment} {obj.offset}'.format(obj=objectInstance)  # Retrieve the THIS base adress for this object
+                self.vmFile.append(command)
+                self.vmFile.append('pop pointer 0')  # Pointer 0 = THIS base address
+
+        methodName = "{}.{}".format(className, methodName)
 
         expressions = xmlElement.find('expressionList').findall('expression')
         argsCount = len(expressions)
@@ -104,8 +127,8 @@ class Compiler:
         for expression in expressions:
             self.parseExpression(expression)
 
-        self.vmFile.append('call {functionName} {argsCount}'.format(
-            functionName=functionName, argsCount=argsCount))
+        command = 'call {methodName} {argsCount}'.format(methodName=methodName, argsCount=argsCount)
+        self.vmFile.append(command)
 
     def parseExpression(self, xmlElement):
         if len(xmlElement) == 1:
@@ -119,7 +142,9 @@ class Compiler:
 
             if operator == '~':
                 self.parseTerm(term)
+                # TODO: not c'est pas bon ! 
                 self.vmFile.append('not')
+                # TODO
 
             elif operator == '-':
                 self.vmFile.append('push constant 0')
@@ -200,6 +225,10 @@ class Compiler:
             if xmlElement[0].tag == 'keyword' and value == 'false':
                 self.vmFile.append('push constant 0')
 
+            # Case: 'this'
+            if xmlElement[0].tag == 'keyword' and value == 'this':
+                self.vmFile.append('push pointer 0')  # Push the base THIS address
+
             # Case: variable
             elif xmlElement[0].tag == 'identifier':
                 symbol = self.lookupSymbol(value)
@@ -244,14 +273,13 @@ class Compiler:
 
             if variableScope == "var":
                 newSymbol = self.currentMethodSymbolTable.addSymbol(varName, varType, "local")
+                self.initializeVariable(newSymbol)
 
             elif variableScope == "field":
                 newSymbol = self.currentClassSymbolTable.addSymbol(varName, varType, "this")
 
             elif variableScope == "static":
                 newSymbol = self.currentClassSymbolTable.addSymbol(varName, varType, "static")
-
-            self.initializeVariable(newSymbol)
 
     def parseLetStatement(self, xmlElement):
         symbolName = xmlElement[1].text
@@ -354,6 +382,6 @@ class Compiler:
             symbol = self.currentClassSymbolTable.getSymbolByName(symbolName)
 
         if not symbol:
-            raise Exception("Unknown variable (not declared ?): {}".format(symbolName))
+            raise NoSuchSymbol("Unknown variable (not declared ?): {}".format(symbolName))
 
         return symbol
