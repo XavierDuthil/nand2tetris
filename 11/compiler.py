@@ -52,6 +52,11 @@ class Compiler:
             self.vmFile.append("call Memory.alloc 1")  # System call to allocate a given size in ram
             self.vmFile.append("pop pointer 0")  # Base address for THIS
 
+        # Set THIS to the value of the first argument
+        elif function[0].text == 'method':
+            self.vmFile.append("push argument 0")
+            self.vmFile.append("pop pointer 0")
+
         # Arguments
         self.currentMethodSymbolTable = SymbolTable()
         arguments = function.find('parameterList')
@@ -105,6 +110,7 @@ class Compiler:
         if xmlElement[1].tag == 'expression':
             self.parseExpression(xmlElement[1])
 
+        self.vmFile.append('')
         self.vmFile.append('return\n')
 
     def parseDoStatement(self, xmlElement):
@@ -113,23 +119,28 @@ class Compiler:
     def parseSubroutineCall(self, xmlElement):
         methodName = xmlElement.findall('identifier')[-1].text
         className = self.currentClassName
+        argsCount = 0
 
         if xmlElement.find('symbol').text == '.':
             objectName = xmlElement.find('identifier').text
             className = objectName
 
-            # Load object address into THIS
-            with suppress(NoSuchSymbol):
+            # Push object address (future THIS) in order to be retrieved as the first argument
+            try:
                 objectInstance = self.lookupSymbol(objectName)
                 className = objectInstance.type
                 command = 'push {obj.segment} {obj.offset}'.format(obj=objectInstance)  # Retrieve the THIS base adress for this object
-                self.vmFile.append(command)
-                self.vmFile.append('pop pointer 0')  # Pointer 0 = THIS base address
+
+            except NoSuchSymbol:
+                command = 'push pointer 0'
+
+            self.vmFile.append(command)
+            argsCount = 1
 
         methodName = "{}.{}".format(className, methodName)
 
         expressions = xmlElement.find('expressionList').findall('expression')
-        argsCount = len(expressions)
+        argsCount += len(expressions)
 
         # Arguments
         for expression in expressions:
