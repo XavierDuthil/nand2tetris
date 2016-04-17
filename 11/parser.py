@@ -315,23 +315,14 @@ def parseReturnStatement(tokensWithTypes):
 def parseExpression(tokensWithTypes):
 	expressionNode = Node("expression")
 
-	# If unary operator
-	if tokensWithTypes[0].value in UNARY_OPERATORS:
-		operator = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=UNARY_OPERATORS)
+	term = parseTerm(tokensWithTypes)
+	expressionNode.children.append(term)
+
+	while tokensWithTypes[0].value in BINARY_OPERATORS:
+		operator = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=BINARY_OPERATORS)
 		term = parseTerm(tokensWithTypes)
 		expressionNode.children.append(operator)
 		expressionNode.children.append(term)
-
-	# Else: Binary operator
-	else:
-		term = parseTerm(tokensWithTypes)
-		expressionNode.children.append(term)
-
-		while tokensWithTypes[0].value in BINARY_OPERATORS:
-			operator = takeNode(tokensWithTypes, expectedType="symbol", possibleValues=BINARY_OPERATORS)
-			term = parseTerm(tokensWithTypes)
-			expressionNode.children.append(operator)
-			expressionNode.children.append(term)
 
 	return expressionNode
 

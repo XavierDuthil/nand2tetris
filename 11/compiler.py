@@ -7,6 +7,14 @@ class NoSuchSymbol(Exception):
     pass
 
 
+class NoSuchOperator(Exception):
+    pass
+
+
+class CompilationError(Exception):
+    pass
+
+
 class Compiler:
     def __init__(self):
         self.vmFile = []
@@ -135,22 +143,6 @@ class Compiler:
             term = xmlElement[0]
             self.parseTerm(term)
 
-        # Unary operator
-        elif len(xmlElement) == 2:
-            operator = xmlElement[0].text
-            term = xmlElement[1]
-
-            if operator == '~':
-                self.parseTerm(term)
-                # TODO: not c'est pas bon ! 
-                self.vmFile.append('not')
-                # TODO
-
-            elif operator == '-':
-                self.vmFile.append('push constant 0')
-                self.parseTerm(term)
-                self.vmFile.append('sub')
-
         elif len(xmlElement) > 2:
             term1 = xmlElement[0]
             self.parseTerm(term1)
@@ -208,6 +200,9 @@ class Compiler:
             elif operator == '|':
                 self.vmFile.append('or')
 
+        else:
+            raise CompilationError("Expression unkown: {} {}".format(xmlElement[0].text, xmlElement[1].text))
+
     def parseTerm(self, xmlElement):
         # Case: single value
         if len(xmlElement) == 1:
@@ -241,14 +236,27 @@ class Compiler:
 
             etc..."""
 
-        # Case: Negative single value
-        elif xmlElement[0].tag == 'symbol' and xmlElement[0].text == '-' and len(xmlElement) == 2:
-            self.vmFile.append('push constant 0')
-
+        # Unary operator
+        elif xmlElement[0].tag == 'symbol' and len(xmlElement) == 2:
+            operator = xmlElement[0].text
             term = xmlElement[1]
-            self.parseTerm(term)
 
-            self.vmFile.append('sub')
+            if operator == '~':
+                self.parseTerm(term)
+
+                # Boolean not <=> (a+1)%2
+                self.vmFile.append('push constant 1')
+                self.vmFile.append('add')
+                self.vmFile.append('push constant 1')
+                self.vmFile.append('and')
+
+            elif operator == '-':
+                self.vmFile.append('push constant 0')
+                self.parseTerm(term)
+                self.vmFile.append('sub')
+
+            else:
+                raise NoSuchOperator("Operator '{}' unknown".format(operator))
 
         # Case: parenthesis around a expression
         elif len(xmlElement) == 3:
