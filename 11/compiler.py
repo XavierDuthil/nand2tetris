@@ -125,17 +125,20 @@ class Compiler:
             objectName = xmlElement.find('identifier').text
             className = objectName
 
-            # Push object address (future THIS) in order to be retrieved as the first argument
-            try:
+            # Push identified object address instead of the currently executed object address as first argument
+            # If no object of this name is found, it is a static call and no THIS argument is required
+            with suppress(NoSuchSymbol):
                 objectInstance = self.lookupSymbol(objectName)
                 className = objectInstance.type
-                command = 'push {obj.segment} {obj.offset}'.format(obj=objectInstance)  # Retrieve the THIS base adress for this object
+                push_this = 'push {obj.segment} {obj.offset}'.format(obj=objectInstance)  # Retrieve the THIS base adress for this object
+                argsCount = 1
+                self.vmFile.append(push_this)
 
-            except NoSuchSymbol:
-                command = 'push pointer 0'
-
-            self.vmFile.append(command)
+        else:
+            # If call is within current object, the first argument is the current object address, to be used as THIS
             argsCount = 1
+            push_this = 'push pointer 0'
+            self.vmFile.append(push_this)
 
         methodName = "{}.{}".format(className, methodName)
 
