@@ -47,7 +47,7 @@ class SquareGame {
             // waits for a key to be pressed.
             while (key = 0) {
                 let key = Keyboard.keyPressed();
-                // do moveSquare();
+                do moveSquare();
             }
 
             if (key = 81) {

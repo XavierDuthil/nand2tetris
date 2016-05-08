@@ -110,11 +110,15 @@ class Compiler:
         if xmlElement[1].tag == 'expression':
             self.parseExpression(xmlElement[1])
 
+        else:
+            self.vmFile.append('push constant 0')
+
         self.vmFile.append('')
         self.vmFile.append('return\n')
 
     def parseDoStatement(self, xmlElement):
         self.parseSubroutineCall(xmlElement)
+        self.vmFile.append('pop pointer 10')  # R13 ?
 
     def parseSubroutineCall(self, xmlElement):
         methodName = xmlElement.findall('identifier')[-1].text
