@@ -118,7 +118,7 @@ class Compiler:
 
     def parseDoStatement(self, xmlElement):
         self.parseSubroutineCall(xmlElement)
-        self.vmFile.append('pop pointer 10')  # R13 ?
+        self.vmFile.append('pop temp 0')
 
     def parseSubroutineCall(self, xmlElement):
         methodName = xmlElement.findall('identifier')[-1].text
