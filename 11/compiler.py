@@ -231,28 +231,32 @@ class Compiler:
                 self.vmFile.append('push constant {}'.format(value))
 
             # Case: boolean value 'true'
-            if xmlElement[0].tag == 'keyword' and value == 'true':
+            elif xmlElement[0].tag == 'keyword' and value == 'true':
                 self.vmFile.append('push constant 1')
 
             # Case: boolean value 'false'
-            if xmlElement[0].tag == 'keyword' and value == 'false':
+            elif xmlElement[0].tag == 'keyword' and value == 'false':
                 self.vmFile.append('push constant 0')
 
             # Case: 'this'
-            if xmlElement[0].tag == 'keyword' and value == 'this':
+            elif xmlElement[0].tag == 'keyword' and value == 'this':
                 self.vmFile.append('push pointer 0')  # Push the base THIS address
 
             # Case: variable
             elif xmlElement[0].tag == 'identifier':
                 symbol = self.lookupSymbol(value)
-
                 self.vmFile.append('push {symbol.segment} {symbol.offset}'.format(symbol=symbol))
 
-            """ TODO
-            elif xmlElement.tag == 'stringConstant':
-            elif xmlElement.tag == 'keywordConstant':
+            elif xmlElement[0].tag == 'stringConstant':
+                # TODO
+                pass
 
+                """ TODO
+            elif xmlElement.tag == 'keywordConstant':
             etc..."""
+
+            else:
+                raise NotImplementedError("Unknown tag: {}".format(xmlElement[0].tag))
 
         # Unary operator
         elif xmlElement[0].tag == 'symbol' and len(xmlElement) == 2:
@@ -286,6 +290,20 @@ class Compiler:
                 xmlElement[0].tag == "identifier" and xmlElement[1].text == "."):
             self.parseSubroutineCall(xmlElement)
 
+        # Case: array cell
+        elif len(xmlElement) == 4 and xmlElement[0].tag == 'identifier' and xmlElement[1].text == '[':
+            symbol = self.lookupSymbol(xmlElement[0].text)
+
+            if xmlElement[2].tag != 'expression':
+                raise CompilationError("Expected expression after '[', found '{}'".format(xmlElement[2].text))
+
+            self.parseExpression(xmlElement[2])  # Push array offset
+            self.vmFile.append('push {symbol.segment} {symbol.offset}'.format(symbol=symbol))
+            self.vmFile.append('add')
+
+            self.vmFile.append('pop pointer 1')  # Pop the cell memory address into THAT
+            self.vmFile.append('push that 0')  # Push the cell value
+
     def parseVarDeclaration(self, xmlElement):
         variableScope = xmlElement[0].text
         varType = xmlElement[1].text
@@ -309,13 +327,26 @@ class Compiler:
 
     def parseLetStatement(self, xmlElement):
         symbolName = xmlElement[1].text
-        # Brackets...
 
-        expression = xmlElement.findall("expression")[-1]  # Last occurence
+        expression = xmlElement.findall("expression")[-1]  # Last expression occurence, representing the value to assign
         self.parseExpression(expression)
 
-        symbol = self.lookupSymbol(symbolName)
-        self.vmFile.append('pop {symbol.segment} {symbol.offset}'.format(symbol=symbol))
+        if len(xmlElement) > 2 and xmlElement[2].text == '[':
+            if xmlElement[3].tag != 'expression':
+                raise CompilationError("Expected expression after '[', found '{}'".format(xmlElement[3].text))
+
+            self.parseExpression(xmlElement[3])  # push array offset
+
+            symbol = self.lookupSymbol(symbolName)
+            self.vmFile.append('push {symbol.segment} {symbol.offset}'.format(symbol=symbol))
+            self.vmFile.append('add')
+
+            self.vmFile.append('pop pointer 1')  # Pop the cell memory address into THAT
+            self.vmFile.append('pop that 0')  # Pop the assigned value into the cell
+
+        else:
+            symbol = self.lookupSymbol(symbolName)
+            self.vmFile.append('pop {symbol.segment} {symbol.offset}'.format(symbol=symbol))
 
     def parseIfStatement(self, xmlElement):
         # Generate labelID for the end label

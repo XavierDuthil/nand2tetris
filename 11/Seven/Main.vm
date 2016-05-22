@@ -1,0 +1,36 @@
+function Main.main 0
+push constant 1
+push constant 2
+push constant 3
+// We already have the 2 operands in the stack, we store them in temp0 and temp1
+pop temp 0
+pop temp 1
+
+// Result initialisation
+push constant 0
+
+// Loop
+label MULTIPLICATION_LOOP
+
+    // Counter decrement
+    push temp 1
+    push constant 1
+    sub
+    pop temp 1
+
+    // Verify loop condition: until counter < 0
+    push temp 1
+    push constant 0
+    lt
+    if-goto MULTIPLICATION_END
+
+    // Add first term value
+    push temp 0
+    add
+
+    goto MULTIPLICATION_LOOP
+
+label MULTIPLICATION_END
+add
+call Output.printInt 1
+return

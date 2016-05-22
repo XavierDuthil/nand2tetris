@@ -1,4 +1,9 @@
-.PHONY:average seven convert test square
+.PHONY:default average seven convert test square
+
+default: average
+
+average:
+	-python3 Jack_to_VM_translator.py ./Average/*.jack
 
 square:
 	-python3 Jack_to_VM_translator.py ./Square/*.jack
@@ -8,9 +13,6 @@ convert:
 
 test:
 	-python3 Jack_to_VM_translator.py ./Test/Main.jack
-
-average:
-	-python3 Jack_to_VM_translator.py ./Average/*.jack
 
 seven:
 	-python3 Jack_to_VM_translator.py ./Seven/*.jack
