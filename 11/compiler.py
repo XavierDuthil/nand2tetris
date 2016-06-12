@@ -247,9 +247,17 @@ class Compiler:
                 symbol = self.lookupSymbol(value)
                 self.vmFile.append('push {symbol.segment} {symbol.offset}'.format(symbol=symbol))
 
+            # Case: string constant
             elif xmlElement[0].tag == 'stringConstant':
-                # TODO
-                pass
+                stringValue = xmlElement[0].text
+
+                self.vmFile.append('push constant {}'.format(len(stringValue)))
+                self.vmFile.append('call String.new 1')
+
+                for char in stringValue:
+                    self.vmFile.append('push constant {}'.format(ord(char)))
+                    self.vmFile.append('call String.appendChar 2')
+
 
                 """ TODO
             elif xmlElement.tag == 'keywordConstant':
@@ -331,6 +339,7 @@ class Compiler:
         expression = xmlElement.findall("expression")[-1]  # Last expression occurence, representing the value to assign
         self.parseExpression(expression)
 
+        # Case array case
         if len(xmlElement) > 2 and xmlElement[2].text == '[':
             if xmlElement[3].tag != 'expression':
                 raise CompilationError("Expected expression after '[', found '{}'".format(xmlElement[3].text))
