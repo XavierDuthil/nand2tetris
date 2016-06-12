@@ -172,8 +172,10 @@ class Compiler:
 
             if operator == '+':
                 self.vmFile.append('add')
+
             elif operator == '-':
                 self.vmFile.append('sub')
+
             elif operator == '*':
                 instructions = textwrap.dedent('''\
                     // We already have the 2 operands in the stack, we store them in temp0 and temp1
@@ -205,6 +207,46 @@ class Compiler:
                         goto MULTIPLICATION_LOOP{labelID}
 
                     label MULTIPLICATION_END{labelID}''').format(labelID=self.nextLabelUniqueID())
+                self.vmFile.extend(instructions.split("\n"))
+
+            elif operator == '/':
+                instructions = textwrap.dedent('''\
+                    // We already have the 2 operands in the stack, we store them in temp0 and temp1
+                    pop temp 1  // Denominator
+                    pop temp 0  // Numerator/Intermediate value
+                    push constant 0
+                    pop temp 2  // Counter
+
+
+                    // Loop
+                    label MULTIPLICATION_LOOP{labelID}
+                        // Verify loop condition: continue until intermediate value < 0
+                        push temp 0
+                        push constant 0
+                        lt
+                        if-goto MULTIPLICATION_END{labelID}
+
+                        // Counter increment
+                        push temp 2
+                        push constant 1
+                        add
+                        pop temp 2
+
+
+                        // Sub denominator value and store intermediate value in temp0
+                        push temp 0
+                        push temp 1
+                        sub
+                        pop temp 0
+
+                        goto MULTIPLICATION_LOOP{labelID}
+
+                    label MULTIPLICATION_END{labelID}
+
+                    // Return counter - 1
+                    push temp 2
+                    push constant 1
+                    sub''').format(labelID=self.nextLabelUniqueID())
                 self.vmFile.extend(instructions.split("\n"))
 
             elif operator == '>':
