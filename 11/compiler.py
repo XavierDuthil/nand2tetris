@@ -46,6 +46,8 @@ class Compiler:
         self.vmFile.append("function {className}.{methodName} {localVarsCount}".format(
             className=self.currentClassName, methodName=methodName, localVarsCount=localVarsCount))
 
+        self.currentMethodSymbolTable = SymbolTable()
+
         if function[0].text == 'constructor':
             sizeToAlloc = self.currentClassSymbolTable.countSymbols('this')
             self.vmFile.append("push constant {}".format(sizeToAlloc))  # Argument for the next call
@@ -57,8 +59,10 @@ class Compiler:
             self.vmFile.append("push argument 0")
             self.vmFile.append("pop pointer 0")
 
+            # Because it is an object, the first argument is "self" and needs to be isolated
+            self.currentMethodSymbolTable.addSymbol("this", self.currentClassName, "argument")
+
         # Arguments
-        self.currentMethodSymbolTable = SymbolTable()
         arguments = function.find('parameterList')
         self.parseMethodArguments(arguments)
 
@@ -81,7 +85,7 @@ class Compiler:
         index = 0
         while index < len(arguments):
             argumentType = arguments[index].text
-            argumentName = arguments[index+1].text
+            argumentName = arguments[index + 1].text
 
             self.currentMethodSymbolTable.addSymbol(argumentName, argumentType, "argument")
             index += 3
@@ -105,6 +109,9 @@ class Compiler:
 
         elif statement.tag == 'ifStatement':
             self.parseIfStatement(statement)
+
+        else:
+            raise CompilationError("Unknown statement '{}'".format(statement.tag))
 
     def parseReturnStatement(self, xmlElement):
         if xmlElement[1].tag == 'expression':
@@ -259,6 +266,8 @@ class Compiler:
                 self.vmFile.append('and')
             elif operator == '|':
                 self.vmFile.append('or')
+            else:
+                raise CompilationError("Unknown operator '{}'".format(operator))
 
         else:
             raise CompilationError("Expression unkown: {} {}".format(xmlElement[0].text, xmlElement[1].text))
@@ -354,6 +363,9 @@ class Compiler:
             self.vmFile.append('pop pointer 1')  # Pop the cell memory address into THAT
             self.vmFile.append('push that 0')  # Push the cell value
 
+        else:
+            raise CompilationError("Unknown term '{}'".format(xmlElement[0].text))
+
     def parseVarDeclaration(self, xmlElement):
         variableScope = xmlElement[0].text
         varType = xmlElement[1].text
@@ -374,6 +386,9 @@ class Compiler:
 
             elif variableScope == "static":
                 newSymbol = self.currentClassSymbolTable.addSymbol(varName, varType, "static")
+
+            else:
+                raise CompilationError("Unknown scope '{}'".format(variableScope))
 
     def parseLetStatement(self, xmlElement):
         symbolName = xmlElement[1].text

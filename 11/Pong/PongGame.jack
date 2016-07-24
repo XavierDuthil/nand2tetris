@@ -158,6 +158,7 @@ class PongGame {
   	    do ball.bounce(bouncingDirection);
 	}
 
+    do Sys.wait(40); // Delays the next movement.
 	return;
     }
 }
