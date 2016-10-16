@@ -1,6 +1,9 @@
-.PHONY:default pong average seven convert test square
+.PHONY:default arrays pong average seven convert test square
 
-default: pong
+default: arrays
+
+arrays:
+	-python3 Jack_to_VM_translator.py ./ComplexArrays/*.jack
 
 pong:
 	-python3 Jack_to_VM_translator.py ./Pong/*.jack

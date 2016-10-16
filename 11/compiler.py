@@ -172,102 +172,104 @@ class Compiler:
             term1 = xmlElement[0]
             self.parseTerm(term1)
 
-            operator = xmlElement[1].text
+            # For each operator
+            for operatorIndex in range(1, len(xmlElement), 2):
+                operator = xmlElement[operatorIndex].text
 
-            term2 = xmlElement[2]
-            self.parseTerm(term2)
+                termAfterOperator = xmlElement[operatorIndex + 1]
+                self.parseTerm(termAfterOperator)
 
-            if operator == '+':
-                self.vmFile.append('add')
+                if operator == '+':
+                    self.vmFile.append('add')
 
-            elif operator == '-':
-                self.vmFile.append('sub')
+                elif operator == '-':
+                    self.vmFile.append('sub')
 
-            elif operator == '*':
-                instructions = textwrap.dedent('''\
-                    // We already have the 2 operands in the stack, we store them in temp0 and temp1
-                    pop temp 0
-                    pop temp 1
-
-                    // Result initialisation
-                    push constant 0
-
-                    // Loop
-                    label MULTIPLICATION_LOOP{labelID}
-
-                        // Counter decrement
-                        push temp 1
-                        push constant 1
-                        sub
+                elif operator == '*':
+                    instructions = textwrap.dedent('''\
+                        // We already have the 2 operands in the stack, we store them in temp0 and temp1
+                        pop temp 0
                         pop temp 1
 
-                        // Verify loop condition: until counter < 0
-                        push temp 1
+                        // Result initialisation
                         push constant 0
-                        lt
-                        if-goto MULTIPLICATION_END{labelID}
 
-                        // Add first term value
-                        push temp 0
-                        add
+                        // Loop
+                        label MULTIPLICATION_LOOP{labelID}
 
-                        goto MULTIPLICATION_LOOP{labelID}
+                            // Counter decrement
+                            push temp 1
+                            push constant 1
+                            sub
+                            pop temp 1
 
-                    label MULTIPLICATION_END{labelID}''').format(labelID=self.nextLabelUniqueID())
-                self.vmFile.extend(instructions.split("\n"))
+                            // Verify loop condition: until counter < 0
+                            push temp 1
+                            push constant 0
+                            lt
+                            if-goto MULTIPLICATION_END{labelID}
 
-            elif operator == '/':
-                instructions = textwrap.dedent('''\
-                    // We already have the 2 operands in the stack, we store them in temp0 and temp1
-                    pop temp 1  // Denominator
-                    pop temp 0  // Numerator/Intermediate value
-                    push constant 0
-                    pop temp 2  // Counter
+                            // Add first term value
+                            push temp 0
+                            add
 
+                            goto MULTIPLICATION_LOOP{labelID}
 
-                    // Loop
-                    label MULTIPLICATION_LOOP{labelID}
-                        // Verify loop condition: continue until intermediate value < 0
-                        push temp 0
+                        label MULTIPLICATION_END{labelID}''').format(labelID=self.nextLabelUniqueID())
+                    self.vmFile.extend(instructions.split("\n"))
+
+                elif operator == '/':
+                    instructions = textwrap.dedent('''\
+                        // We already have the 2 operands in the stack, we store them in temp0 and temp1
+                        pop temp 1  // Denominator
+                        pop temp 0  // Numerator/Intermediate value
                         push constant 0
-                        lt
-                        if-goto MULTIPLICATION_END{labelID}
+                        pop temp 2  // Counter
 
-                        // Counter increment
+
+                        // Loop
+                        label MULTIPLICATION_LOOP{labelID}
+                            // Verify loop condition: continue until intermediate value < 0
+                            push temp 0
+                            push constant 0
+                            lt
+                            if-goto MULTIPLICATION_END{labelID}
+
+                            // Counter increment
+                            push temp 2
+                            push constant 1
+                            add
+                            pop temp 2
+
+
+                            // Sub denominator value and store intermediate value in temp0
+                            push temp 0
+                            push temp 1
+                            sub
+                            pop temp 0
+
+                            goto MULTIPLICATION_LOOP{labelID}
+
+                        label MULTIPLICATION_END{labelID}
+
+                        // Return counter - 1
                         push temp 2
                         push constant 1
-                        add
-                        pop temp 2
+                        sub''').format(labelID=self.nextLabelUniqueID())
+                    self.vmFile.extend(instructions.split("\n"))
 
-
-                        // Sub denominator value and store intermediate value in temp0
-                        push temp 0
-                        push temp 1
-                        sub
-                        pop temp 0
-
-                        goto MULTIPLICATION_LOOP{labelID}
-
-                    label MULTIPLICATION_END{labelID}
-
-                    // Return counter - 1
-                    push temp 2
-                    push constant 1
-                    sub''').format(labelID=self.nextLabelUniqueID())
-                self.vmFile.extend(instructions.split("\n"))
-
-            elif operator == '>':
-                self.vmFile.append('gt')
-            elif operator == '<':
-                self.vmFile.append('lt')
-            elif operator == '=':
-                self.vmFile.append('eq')
-            elif operator == '&':
-                self.vmFile.append('and')
-            elif operator == '|':
-                self.vmFile.append('or')
-            else:
-                raise CompilationError("Unknown operator '{}'".format(operator))
+                elif operator == '>':
+                    self.vmFile.append('gt')
+                elif operator == '<':
+                    self.vmFile.append('lt')
+                elif operator == '=':
+                    self.vmFile.append('eq')
+                elif operator == '&':
+                    self.vmFile.append('and')
+                elif operator == '|':
+                    self.vmFile.append('or')
+                else:
+                    raise CompilationError("Unknown operator '{}'".format(operator))
 
         else:
             raise CompilationError("Expression unkown: {} {}".format(xmlElement[0].text, xmlElement[1].text))
@@ -293,6 +295,10 @@ class Compiler:
             elif xmlElement[0].tag == 'keyword' and value == 'this':
                 self.vmFile.append('push pointer 0')  # Push the base THIS address
 
+            # Case: 'null'
+            elif xmlElement[0].tag == 'keyword' and value == 'null':
+                self.vmFile.append('push constant 0')
+
             # Case: variable
             elif xmlElement[0].tag == 'identifier':
                 symbol = self.lookupSymbol(value)
@@ -315,7 +321,7 @@ class Compiler:
             etc..."""
 
             else:
-                raise NotImplementedError("Unknown tag: {}".format(xmlElement[0].tag))
+                raise NotImplementedError("Unknown tag: {} (value: {})".format(xmlElement[0].tag, value))
 
         # Unary operator
         elif xmlElement[0].tag == 'symbol' and len(xmlElement) == 2:
