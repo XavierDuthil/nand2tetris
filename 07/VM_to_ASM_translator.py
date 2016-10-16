@@ -3,274 +3,291 @@ import re  # regular expressions
 import sys  # stdout
 import time
 
-REGEX_FIRST_WORD = re.compile('^([^ ]*)');
-REGEX_SECOND_WORD = re.compile('^[^ ]* ([^ ]*)');
-REGEX_THIRD_WORD = re.compile('^[^ ]* [^ ]* ([^ ]*)');
+REGEX_FIRST_WORD = re.compile('^([^ ]*)')
+REGEX_SECOND_WORD = re.compile('^[^ ]* ([^ ]*)')
+REGEX_THIRD_WORD = re.compile('^[^ ]* [^ ]* ([^ ]*)')
 
 SEGMENTS_POINTER = {
-	"local": 	"LCL",
-	"argument":	"ARG",
-	"this":		"THIS",
-	"that":		"THAT",
-};
+    "local": "LCL",
+    "argument": "ARG",
+    "this": "THIS",
+    "that": "THAT",
+}
 SEGMENTS_OFFSET = {
-	"temp":		0,
-	"static":	16,
-	"pointer": 	3,
-};
+    "temp": 0,
+    "static": 16,
+    "pointer": 3,
+}
 
 
 def readArguments():
-	parser = argparse.ArgumentParser(description='Translate VM code to Hack code.');
-	parser.add_argument('vmFile', type=str, help='the file to translate');
-	parser.add_argument('-o', '--output', dest='output_file', action='store',
-	                   help='the output hack code file');
+    parser = argparse.ArgumentParser(
+        description='Translate VM code to Hack code.')
+    parser.add_argument('vmFile', type=str, help='the file to translate')
+    parser.add_argument('-o', '--output', dest='output_file', action='store',
+                        help='the output hack code file')
 
-	return parser.parse_args();
+    return parser.parse_args()
+
 
 def readVmProgram(vmFile):
-	with open(vmFile, 'r') as f:
-		lines = f.read().splitlines();
+    with open(vmFile, 'r') as f:
+        lines = f.read().splitlines()
 
-	vmProgram = [];
-	for line in lines:
-		if not line.startswith("//") and len(line):
-			newLine = line;
+    vmProgram = []
+    for line in lines:
+        if not line.startswith("//") and len(line):
+            newLine = line
 
-			if "//" in line:
-				newLine = re.sub('//.*', '', line);
+            if "//" in line:
+                newLine = re.sub('//.*', '', line)
 
-			# vmProgram contains the exploitable data, white spaces are stripped.
-			vmProgram.append(newLine.strip());
+            # vmProgram contains the exploitable data, white spaces are
+            # stripped.
+            vmProgram.append(newLine.strip())
 
-	return vmProgram;
+    return vmProgram
 
 
 def translate(vmProgram):
-	outputProgram = [];
+    outputProgram = []
 
-	outputProgram = [];
+    outputProgram = []
 
-	for line in vmProgram:
-		firstWord = REGEX_FIRST_WORD.match(line).group(1);
+    for line in vmProgram:
+        firstWord = REGEX_FIRST_WORD.match(line).group(1)
 
-		if firstWord == "push":
-			translatePushCommand(outputProgram, line);
+        if firstWord == "push":
+            translatePushCommand(outputProgram, line)
 
-		elif firstWord == "pop":
-			translatePopCommand(outputProgram, line);
+        elif firstWord == "pop":
+            translatePopCommand(outputProgram, line)
 
-		elif firstWord == "add":
-			translateAddCommand(outputProgram, line);
+        elif firstWord == "add":
+            translateAddCommand(outputProgram, line)
 
-		elif firstWord == "eq":
-			translateEqCommand(outputProgram, line);
+        elif firstWord == "eq":
+            translateEqCommand(outputProgram, line)
 
-		elif firstWord == "lt":
-			translateLtCommand(outputProgram, line);
+        elif firstWord == "lt":
+            translateLtCommand(outputProgram, line)
 
-		elif firstWord == "gt":
-			translateGtCommand(outputProgram, line);
+        elif firstWord == "gt":
+            translateGtCommand(outputProgram, line)
 
-		elif firstWord == "sub":
-			translateSubCommand(outputProgram, line);
-		
-		elif firstWord == "neg":
-			translateNegCommand(outputProgram, line);
+        elif firstWord == "sub":
+            translateSubCommand(outputProgram, line)
 
-		elif firstWord == "and":
-			translateAndCommand(outputProgram, line);
+        elif firstWord == "neg":
+            translateNegCommand(outputProgram, line)
 
-		elif firstWord == "or":
-			translateOrCommand(outputProgram, line);
+        elif firstWord == "and":
+            translateAndCommand(outputProgram, line)
 
+        elif firstWord == "or":
+            translateOrCommand(outputProgram, line)
 
-	return outputProgram;
+    return outputProgram
 
 
 def translatePushCommand(outputProgram, line):
-	segmentName = REGEX_SECOND_WORD.match(line).group(1);
-	thirdWord = REGEX_THIRD_WORD.match(line).group(1);
+    segmentName = REGEX_SECOND_WORD.match(line).group(1)
+    thirdWord = REGEX_THIRD_WORD.match(line).group(1)
 
-	if segmentName == "constant":	# constant = stack segment
-		# Read value and put it in D
-		outputProgram.append("@{value}".format(value=thirdWord));
-		outputProgram.append("D=A");
+    if segmentName == "constant":  # constant = stack segment
+        # Read value and put it in D
+        outputProgram.append("@{value}".format(value=thirdWord))
+        outputProgram.append("D=A")
 
-		# Put value at the adress indicated by the stackPointer
-		outputProgram.append("@SP");
-		outputProgram.append("A=M");
-		outputProgram.append("M=D");
+        # Put value at the adress indicated by the stackPointer
+        outputProgram.append("@SP")
+        outputProgram.append("A=M")
+        outputProgram.append("M=D")
 
-	else:
-		addressInSegment = int(thirdWord);
-		loadAbsoluteAddressIntoD(outputProgram, segmentName, addressInSegment);
+    else:
+        addressInSegment = int(thirdWord)
+        loadAbsoluteAddressIntoD(outputProgram, segmentName, addressInSegment)
 
-		# Store the value from the source in D
-		outputProgram.append("A=D");
-		outputProgram.append("D=M");
+        # Store the value from the source in D
+        outputProgram.append("A=D")
+        outputProgram.append("D=M")
 
-		# Push value on the stack
-		outputProgram.append("@SP");
-		outputProgram.append("A=M");
-		outputProgram.append("M=D");
+        # Push value on the stack
+        outputProgram.append("@SP")
+        outputProgram.append("A=M")
+        outputProgram.append("M=D")
 
-	outputProgram += incrementStackPointer();
+    outputProgram += incrementStackPointer()
 
 
 def translatePopCommand(outputProgram, line):
-	segmentName = REGEX_SECOND_WORD.match(line).group(1);
-	addressInSegment = int(REGEX_THIRD_WORD.match(line).group(1));
-	loadAbsoluteAddressIntoD(outputProgram, segmentName, addressInSegment);
+    segmentName = REGEX_SECOND_WORD.match(line).group(1)
+    addressInSegment = int(REGEX_THIRD_WORD.match(line).group(1))
+    loadAbsoluteAddressIntoD(outputProgram, segmentName, addressInSegment)
 
-	# Push value of the destination address (place to pop to) on stack
-	outputProgram.append("@SP");
-	outputProgram.append("A=M");
-	outputProgram.append("M=D");	
+    # Push value of the destination address (place to pop to) on stack
+    outputProgram.append("@SP")
+    outputProgram.append("A=M")
+    outputProgram.append("M=D")
 
-	# Store value to pop in D
-	outputProgram += decrementStackPointer();
-	outputProgram.append("@SP");
-	outputProgram.append("A=M");
-	outputProgram.append("D=M");
+    # Store value to pop in D
+    outputProgram += decrementStackPointer()
+    outputProgram.append("@SP")
+    outputProgram.append("A=M")
+    outputProgram.append("D=M")
 
-	# Put the value at the address
-	outputProgram += incrementStackPointer();
-	outputProgram.append("@SP");
-	outputProgram.append("A=M");
-	outputProgram.append("A=M");
-	outputProgram.append("M=D");	# Place the value at the address of the specified segment
-	
-	outputProgram += decrementStackPointer();
+    # Put the value at the address
+    outputProgram += incrementStackPointer()
+    outputProgram.append("@SP")
+    outputProgram.append("A=M")
+    outputProgram.append("A=M")
+    outputProgram.append("M=D")
+    # Place the value at the address of the specified segment
+
+    outputProgram += decrementStackPointer()
 
 
 def loadAbsoluteAddressIntoD(outputProgram, segmentName, addressInSegment):
-	if segmentName in SEGMENTS_OFFSET :
-		address = int(addressInSegment) + SEGMENTS_OFFSET[segmentName];
-		outputProgram.append("@{address}".format(address=address));
-		outputProgram.append("D=A");
+    if segmentName in SEGMENTS_OFFSET:
+        address = int(addressInSegment) + SEGMENTS_OFFSET[segmentName]
+        outputProgram.append("@{address}".format(address=address))
+        outputProgram.append("D=A")
 
-	else:
-		segmentPointer = SEGMENTS_POINTER[segmentName];
-		# Compute the destination address
-		outputProgram.append("@{segmentPointer}".format(segmentPointer=segmentPointer));
-		outputProgram.append("D=M");
-		outputProgram.append("@{address}".format(address=addressInSegment));
-		outputProgram.append("D=D+A");
+    else:
+        segmentPointer = SEGMENTS_POINTER[segmentName]
+        # Compute the destination address
+        outputProgram.append(
+            "@{segmentPointer}".format(segmentPointer=segmentPointer))
+        outputProgram.append("D=M")
+        outputProgram.append("@{address}".format(address=addressInSegment))
+        outputProgram.append("D=D+A")
+
 
 def translateNegCommand(outputProgram, line):
-	# Read value at the previous pointed address and store it in D
-	outputProgram += decrementStackPointer();
-	outputProgram.append("A=M");
-	outputProgram.append("M=-M");
-	outputProgram += incrementStackPointer();
+    # Read value at the previous pointed address and store it in D
+    outputProgram += decrementStackPointer()
+    outputProgram.append("A=M")
+    outputProgram.append("M=-M")
+    outputProgram += incrementStackPointer()
+
 
 def operation(func):
-	def newFunc(outputProgram, line):
-		# Read value at the previous pointed address and store it in D
-		outputProgram += decrementStackPointer();
-		outputProgram.append("A=M");
-		outputProgram.append("D=M");
-		
-		# Load value into M
-		outputProgram += decrementStackPointer();
-		outputProgram.append("A=M");
+    def newFunc(outputProgram, line):
+        # Read value at the previous pointed address and store it in D
+        outputProgram += decrementStackPointer()
+        outputProgram.append("A=M")
+        outputProgram.append("D=M")
 
-		# Apply the operation
-		func(outputProgram, line);
+        # Load value into M
+        outputProgram += decrementStackPointer()
+        outputProgram.append("A=M")
 
-		outputProgram += incrementStackPointer();
-	return newFunc;
+        # Apply the operation
+        func(outputProgram, line)
+
+        outputProgram += incrementStackPointer()
+    return newFunc
 
 # Decorate the function (execute code before and after)
+
+
 @operation
 def translateAddCommand(outputProgram, line):
-	outputProgram.append("M=M+D");
+    outputProgram.append("M=M+D")
+
 
 @operation
 def translateSubCommand(outputProgram, line):
-	outputProgram.append("M=M-D");
+    outputProgram.append("M=M-D")
+
 
 @operation
 def translateAndCommand(outputProgram, line):
-	outputProgram.append("M=M&D");
+    outputProgram.append("M=M&D")
+
 
 @operation
 def translateOrCommand(outputProgram, line):
-	outputProgram.append("M=M|D");
-
+    outputProgram.append("M=M|D")
 
 
 def comparison(func):
-	def newFunc(outputProgram, line):
-		outputProgram += decrementStackPointer();
-		outputProgram.append("A=M");
-		outputProgram.append("D=M");
+    def newFunc(outputProgram, line):
+        outputProgram += decrementStackPointer()
+        outputProgram.append("A=M")
+        outputProgram.append("D=M")
 
-		# Substract previous value to this one and store result into D
-		outputProgram += decrementStackPointer();
-		outputProgram.append("A=M");
-		outputProgram.append("D=M-D");
+        # Substract previous value to this one and store result into D
+        outputProgram += decrementStackPointer()
+        outputProgram.append("A=M")
+        outputProgram.append("D=M-D")
 
-		outputProgram.append("@{value}".format(value=len(outputProgram) + 5));
+        outputProgram.append("@{value}".format(value=len(outputProgram) + 5))
 
-		# Execute the decorated function
-		func(outputProgram, line);
+        # Execute the decorated function
+        func(outputProgram, line)
 
-		# Else :
-		outputProgram.append("D=0");
-		outputProgram.append("@{value}".format(value=len(outputProgram) + 3));
-		outputProgram.append("0;JMP");
+        # Else :
+        outputProgram.append("D=0")
+        outputProgram.append("@{value}".format(value=len(outputProgram) + 3))
+        outputProgram.append("0;JMP")
 
-		# If :
-		outputProgram.append("D=-1");
+        # If :
+        outputProgram.append("D=-1")
 
-		outputProgram+=pushD();
-	return newFunc;
+        outputProgram += pushD()
+    return newFunc
+
 
 @comparison
 def translateEqCommand(outputProgram, line):
-	outputProgram.append("D;JEQ");
+    outputProgram.append("D;JEQ")
+
 
 @comparison
 def translateLtCommand(outputProgram, line):
-	outputProgram.append("D;JLT");
+    outputProgram.append("D;JLT")
+
 
 @comparison
 def translateGtCommand(outputProgram, line):
-	outputProgram.append("D;JGT");
+    outputProgram.append("D;JGT")
 
 
 def incrementStackPointer():
-	return ["@SP", "M=M+1"];
+    return ["@SP", "M=M+1"]
+
 
 def decrementStackPointer():
-	return ["@SP", "M=M-1"];
+    return ["@SP", "M=M-1"]
+
 
 def pushD():
-	return [
-		"@SP",
-		"A=M",
-		"M=D",
-	] + incrementStackPointer();
+    return [
+        "@SP",
+        "A=M",
+        "M=D",
+    ] + incrementStackPointer()
+
 
 def writeHackProgram(outputProgram, output_file):
-	outputString = '\n'.join(outputProgram);
+    outputString = '\n'.join(outputProgram)
 
-	if not output_file:
-		sys.stdout.write(outputString);
+    if not output_file:
+        sys.stdout.write(outputString)
 
-	else:
-		with open(output_file, 'w') as f:
-			f.write(outputString);
+    else:
+        with open(output_file, 'w') as f:
+            f.write(outputString)
+
 
 def main():
-	args = readArguments();
-	vmProgram = readVmProgram(args.vmFile);
-	outputProgram = translate(vmProgram);
-	writeHackProgram(outputProgram, args.output_file);
+    args = readArguments()
+    vmProgram = readVmProgram(args.vmFile)
+    outputProgram = translate(vmProgram)
+    writeHackProgram(outputProgram, args.output_file)
 
 if __name__ == "__main__":
-	time1 = time.time();
-	main();
+    time1 = time.time()
+    main()
 # 	print(time.time() - time1);
