@@ -15,7 +15,7 @@ class String {
     /** De-allocates the string and frees its space. */
     method void dispose() {
     }
-
+dsfdsqfdsq fdsqf qsf ds
     /** Returns the current length of this String. */
     method int length() {
     }

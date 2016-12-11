@@ -13,10 +13,10 @@ class Memory {
 
     /** Initializes memory parameters. */
     function void init() {
-        let freeListHead = new FreeList();
-        let freeListHead.offset = 2048;
-        let freeListHead.length = 16384 - 2048; // HeapBottom - HeapStart
-        let freeListHead.next = null;
+        let freeListHead = FreeList.new();
+        do freeListHead.setOffset(2048);
+        do freeListHead.setLength(16384 - 2048); // HeapBottom - HeapStart
+        do freeListHead.setNext(null);
 
         let memory = 0;
         return;
@@ -38,28 +38,29 @@ class Memory {
      *  specified size and returns a reference to its base address. */
     function int alloc(int size) {
         var FreeList bestFreeList;
+        var int segmentSize;
+        var int offset;
+
         let bestFreeList = freeListHead;
 
         // Segment has two parts: a:the length of the segment and b:the allocated space requested
-        var int segmentSize;
         let segmentSize = size + 1; // Need to use the first offset for storing the size
 
         // Search the first fitting freeList
-        while (segmentSize > bestFreeList.length){
-            let bestFreeList = bestFreeList.next;
+        while (segmentSize > bestFreeList.getLength()){
+            let bestFreeList = bestFreeList.getNext();
 
             if (bestFreeList = null){
                 return -1;
             }
         }
 
-        var int offset;
-        let offset = bestFreeList.offset;
+        let offset = bestFreeList.getOffset();
         let memory[offset] = segmentSize;
 
         // Update the chosen freeList object
-        let bestFreeList.offset = offset + segmentSize;
-        let bestFreeList.length = bestFreeList.length - segmentSize;
+        do bestFreeList.setOffset(offset + segmentSize);
+        do bestFreeList.setLength(bestFreeList.getLength() - segmentSize);
 
         return offset + 1;
     }
@@ -67,59 +68,51 @@ class Memory {
     /** De-allocates the given object and frees its space. */
     function void deAlloc(int deAlloc) {
         var int segmentOffset;
-        let segmentOffset = deAlloc - 1;
-
         var int segmentSize;
-        let segmentSize = memory[segmentOffset];
-
         var int followingOffset;
-        let followingOffset = segmentOffset + segmentSize;
-
         var FreeList previousFreeList;
-        let previousFreeList = null;
-
         var FreeList followingFreeList;
+        var FreeList newFreeList;
+
+        let segmentOffset = deAlloc - 1;
+        let segmentSize = memory[segmentOffset];
+        let followingOffset = segmentOffset + segmentSize;
+        let previousFreeList = null;
         let followingFreeList = freeListHead;
 
         // Search the closest previous freeList
-        while (~(followingFreeList = null) & (followingFreeList.offset < deAlloc)){
+        while (~(followingFreeList = null) & (followingFreeList.getOffset() < deAlloc)){
             let previousFreeList = followingFreeList;
-            let followingFreeList = followingFreeList.next;
+            let followingFreeList = followingFreeList.getNext();
         }
 
-        var FreeList newFreeList;
-        let newFreeList = new FreeList();
+        let newFreeList = FreeList.new();
 
         // Before freeListHead
         if (previousFreeList = null) {
             // Insert new freeList
-            let newFreeList.offset = segmentOffset;
-            let newFreeList.length = segmentSize;
-            let newFreeList.next = freeListHead;
+            do newFreeList.setOffset(segmentOffset);
+            do newFreeList.setLength(segmentSize);
+            do newFreeList.setNext(freeListHead);
 
             let freeListHead = newFreeList;
         }
 
         else {
             // Insert new freeList
-            let newFreeList.offset = segmentOffset;
-            let newFreeList.length = segmentSize;
-            let newFreeList.next = followingFreeList;
+            do newFreeList.setOffset(segmentOffset);
+            do newFreeList.setLength(segmentSize);
+            do newFreeList.setNext(followingFreeList);
 
-            let previousFreeList.next = newFreeList;
+            do previousFreeList.setNext(newFreeList);
         }
         
         // Can merge
-        if (~(followingFreeList = null) & (followingOffset = followingFreeList.offset)) {
-            let newFreeList.next = followingFreeList.next;
-            let newFreeList.length = newFreeList.length + followingFreeList.next;
+        if (~(followingFreeList = null) & (followingOffset = followingFreeList.getOffset())) {
+            do newFreeList.setNext(followingFreeList.getNext());
+            do newFreeList.setLength(newFreeList.getLength() + followingFreeList.getNext());
             let followingFreeList = null;
         }
+        return;
     }
-}
-
-class FreeList {
-    var int offset;
-    var int length;
-    var FreeList next;
 }

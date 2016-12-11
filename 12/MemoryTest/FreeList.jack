@@ -1,0 +1,39 @@
+class FreeList {
+    field int offset;
+    field int length;
+    field FreeList next;
+
+    constructor FreeList new() {
+        let offset = 0;
+        let length = 0;
+        let next = 0;
+        return this;
+    }
+
+    method int getOffset() {
+        return offset;
+    }
+
+    method int getLength() {
+        return length;
+    }
+
+    method FreeList getNext() {
+        return next;
+    }
+
+    method void setOffset(int newOffset) {
+        let offset = newOffset;
+        return;
+    }
+
+    method void setLength(int newLength) {
+        let length = newLength;
+        return;
+    }
+
+    method void setNext(FreeList newNext) {
+        let next = newNext;
+        return;
+    }
+}
