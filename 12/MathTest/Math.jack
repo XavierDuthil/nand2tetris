@@ -10,29 +10,85 @@ class Math {
 
     /** Initializes the library. */
     function void init() {
+        return;
     }
 
     /** Returns the absolute value of x. */
     function int abs(int x) {
+        if (x < 0) {
+            return -x;
+        }
+        return x;
     }
 
     /** Returns the product of x and y. */
     function int multiply(int x, int y) {
+        var int result, counter;
+        let result = 0;
+        let counter = Math.abs(y);
+
+        while (counter > 0) {
+            let result = result + Math.abs(x);
+            let counter = counter - 1;
+        }
+
+        if (x < 0) {
+            let result = -result;
+        }
+        if (y < 0) {
+            let result = -result;
+        }
+        return result;
     }
 
     /** Returns the integer part of x/y. */
     function int divide(int x, int y) {
+        var int result, counter, absX, absY;
+        let result = 0;
+        let absX = Math.abs(x);
+        let absY = Math.abs(y);
+
+        while ((absX > absY) | (absX = absY)) {
+            let absX = absX - absY;
+            let result = result + 1;
+        }
+
+        if (x < 0) {
+            let result = -result;
+        }
+        if (y < 0) {
+            let result = -result;
+        }
+        return result;
     }
 
     /** Returns the integer part of the square root of x. */
     function int sqrt(int x) {
+        var int oldGuess, guess;
+        let oldGuess = -1;
+        let guess = x / 2;
+        while (Math.abs(guess - oldGuess) > 1) {
+            let oldGuess = guess;
+            let guess = ((guess + (x / guess)) / 2);
+        }
+        return guess;
     }
 
     /** Returns the greater number. */
     function int max(int a, int b) {
+        if (a > b) {
+            return a;
+        } else {
+            return b;
+        }
     }
 
     /** Returns the smaller number. */
     function int min(int a, int b) {
+        if (a < b) {
+            return a;
+        } else {
+            return b;
+        }
     }
 }
