@@ -9,16 +9,11 @@
 class Memory {
     static Array memory;
     static int freeOffset;
-    static FreeList freeListHead;
 
     /** Initializes memory parameters. */
     function void init() {
-        let freeListHead = FreeList.new();
-        do freeListHead.setOffset(2048);
-        do freeListHead.setLength(16384 - 2048); // HeapBottom - HeapStart
-        do freeListHead.setNext(null);
-
         let memory = 0;
+        let freeOffset = 2048;
         return;
     }
 
@@ -37,82 +32,20 @@ class Memory {
     /** finds and allocates from the heap a memory block of the 
      *  specified size and returns a reference to its base address. */
     function int alloc(int size) {
-        var FreeList bestFreeList;
-        var int segmentSize;
-        var int offset;
+        var int baseReference;
+        let baseReference = freeOffset;
 
-        let bestFreeList = freeListHead;
-
-        // Segment has two parts: a:the length of the segment and b:the allocated space requested
-        let segmentSize = size + 1; // Need to use the first offset for storing the size
-
-        // Search the first fitting freeList
-        while (segmentSize > bestFreeList.getLength()){
-            let bestFreeList = bestFreeList.getNext();
-
-            if (bestFreeList = null){
-                return -1;
-            }
-        }
-
-        let offset = bestFreeList.getOffset();
-        let memory[offset] = segmentSize;
-
-        // Update the chosen freeList object
-        do bestFreeList.setOffset(offset + segmentSize);
-        do bestFreeList.setLength(bestFreeList.getLength() - segmentSize);
-
-        return offset + 1;
+        let freeOffset = freeOffset + size;
+        return baseReference;
     }
 
     /** De-allocates the given object and frees its space. */
-    function void deAlloc(int deAlloc) {
-        var int segmentOffset;
-        var int segmentSize;
-        var int followingOffset;
-        var FreeList previousFreeList;
-        var FreeList followingFreeList;
-        var FreeList newFreeList;
-
-        let segmentOffset = deAlloc - 1;
-        let segmentSize = memory[segmentOffset];
-        let followingOffset = segmentOffset + segmentSize;
-        let previousFreeList = null;
-        let followingFreeList = freeListHead;
-
-        // Search the closest previous freeList
-        while (~(followingFreeList = null) & (followingFreeList.getOffset() < deAlloc)){
-            let previousFreeList = followingFreeList;
-            let followingFreeList = followingFreeList.getNext();
-        }
-
-        let newFreeList = FreeList.new();
-
-        // Before freeListHead
-        if (previousFreeList = null) {
-            // Insert new freeList
-            do newFreeList.setOffset(segmentOffset);
-            do newFreeList.setLength(segmentSize);
-            do newFreeList.setNext(freeListHead);
-
-            let freeListHead = newFreeList;
-        }
-
-        else {
-            // Insert new freeList
-            do newFreeList.setOffset(segmentOffset);
-            do newFreeList.setLength(segmentSize);
-            do newFreeList.setNext(followingFreeList);
-
-            do previousFreeList.setNext(newFreeList);
-        }
-        
-        // Can merge
-        if (~(followingFreeList = null) & (followingOffset = followingFreeList.getOffset())) {
-            do newFreeList.setNext(followingFreeList.getNext());
-            do newFreeList.setLength(newFreeList.getLength() + followingFreeList.getNext());
-            let followingFreeList = null;
-        }
+    function void deAlloc(int object) {
         return;
-    }
+    }    
 }
+
+// class FreeList {
+//     var int length;
+//     var FreeList next;
+// }
