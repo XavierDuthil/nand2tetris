@@ -64,12 +64,24 @@ class String {
      *  numeric character. */
     method int intValue() {
         var int result, index;
+        var boolean isNegative;
+        let isNegative = 0;
         let result = 0;
         let index = 0;
+
+        // Check for minus
+        if (baseArray[index] = 45) {
+            let index = index + 1;
+            let isNegative = 1;
+        }
 
         while (baseArray[index] > 47 & baseArray[index] < 58 & index < length) {
             let result = result * 10 + baseArray[index] - 48;
             let index = index + 1;
+        }
+
+        if (isNegative) {
+            let result = -result;
         }
 
         return result;
@@ -78,9 +90,15 @@ class String {
     /** Sets this String to hold a representation of the given number. */
     method void setInt(int number) {
         var int magnitude, copyOfNumber;
+
+        do reset();
+        if (number < 0) {
+            do appendChar(45);  // ASCII code for "-"
+            let number = -number;
+        }
+
         let copyOfNumber = number;
         let magnitude = 1;
-        let length = 0;
 
         while (copyOfNumber > 9) {
             let copyOfNumber = copyOfNumber / 10;
@@ -88,7 +106,7 @@ class String {
         }
 
         while (magnitude > 0) {
-            do appendChar(number / magnitude);
+            do appendChar((number / magnitude) + 48);
             let number = number - ((number / magnitude) * magnitude);
             let magnitude = magnitude / 10;
         }
@@ -98,16 +116,21 @@ class String {
 
     /** Returns the new line character. */
     function char newLine() {
-        return 10;
+        return 128;
     }
 
     /** Returns the backspace character. */
     function char backSpace() {
-        return 8;
+        return 129;
     }
 
     /** Returns the double quote (") character. */
     function char doubleQuote() {
         return 34;
+    }
+
+    method void reset() {
+        let length = 0;
+        return; 
     }
 }
