@@ -10,13 +10,40 @@
  * Each row is 11 pixels high (including 1 space pixel), and 8 pixels wide
  * (including 2 space pixels).
  */
+
 class Output {
 
     // Character map for printing on the left of a screen word
-    static Array charMaps; 
+    static Array charMaps;
+
+    static int SCREEN_STARTING_ADDRESS;
+    static int currentCursorAddress;
+    static int currentCursorLine;
+    static int currentCursorColumn;
+    static boolean currentCursorRightChar;  // Equals '1' if it's the rightmost char of the memory address
+
+    static int LINE_HEIGHT_PX;
+    static int CHARACTER_WIDTH_PX;
+    static int TOTAL_TEXT_COLUMNS;
+    static int TOTAL_TEXT_LINES;
+    static int PIXEL_LINE_WIDTH_IN_WORDS;
 
     /** Initializes the screen and locates the cursor at the screen's top-left. */
     function void init() {
+        let SCREEN_STARTING_ADDRESS = 16384;
+        let LINE_HEIGHT_PX = 11;
+        let CHARACTER_WIDTH_PX = 8;
+        let TOTAL_TEXT_COLUMNS = 64;
+        let TOTAL_TEXT_LINES = 23;
+        let PIXEL_LINE_WIDTH_IN_WORDS = TOTAL_TEXT_COLUMNS / 2;
+
+        let currentCursorAddress = 16384;
+        let currentCursorLine = 0;
+        let currentCursorColumn = 0;
+        let currentCursorRightChar = 0;
+
+        do Output.initMap();
+        return;
     }
 
     // Initalizes the character map array
@@ -65,7 +92,7 @@ class Output {
         do Output.create(64,30,51,51,59,59,59,27,3,30,0,0);  // @
         do Output.create(63,30,51,51,24,12,12,0,12,12,0,0);  // ?
 
-        do Output.create(65,0,0,0,0,0,0,0,0,0,0,0);          // A ** TO BE FILLED **
+        do Output.create(65,12,30,51,51,63,51,51,51,51,0,0); // A
         do Output.create(66,31,51,51,51,31,51,51,51,31,0,0); // B
         do Output.create(67,28,54,35,3,3,3,35,54,28,0,0);    // C
         do Output.create(68,15,27,51,51,51,51,51,27,15,0,0); // D
@@ -171,28 +198,65 @@ class Output {
     /** Moves the cursor to the j’th column of the i’th row,
      *  and erases the character that was there. */
     function void moveCursor(int i, int j) {
+        var int verticalOffset, horizontalOffset;
+
+        // If j is superior to the columns count
+        if ((j > TOTAL_TEXT_COLUMNS) | (j = TOTAL_TEXT_COLUMNS)) {
+            let j = j - TOTAL_TEXT_COLUMNS;
+            let i = i + 1;
+        }
+
+        let verticalOffset = (LINE_HEIGHT_PX * (TOTAL_TEXT_COLUMNS / 2)) * i;
+        let horizontalOffset = j / 2;
+
+        let currentCursorRightChar = j - ((j / 2) * 2);  // Equals '1' if it's the rightmost char of the memory address
+        
+        let currentCursorAddress = SCREEN_STARTING_ADDRESS + verticalOffset + horizontalOffset;
+        let currentCursorLine = i;
+        let currentCursorColumn = j;
+
+        return;
     }
 
     /** Prints c at the cursor location and advances the cursor one
      *  column forward. */
     function void printChar(char c) {
+        var Array map;
+        var int currentPixelAddress;
+        var int pixelLineIndex;
+
+        let map = Output.getMap(c);
+        let currentPixelAddress = currentCursorAddress;
+        let pixelLineIndex = 0;
+
+        while (pixelLineIndex < 11) {
+            do Memory.poke(currentPixelAddress, map[pixelLineIndex]);
+            let pixelLineIndex = pixelLineIndex + 1;
+        }
+
+        do Output.moveCursor(currentCursorLine, currentCursorColumn + 1);
+        return;
     }
 
     /** Prints s starting at the cursor location, and advances the
      *  cursor appropriately. */
     function void printString(String s) {
+        return;
     }
 
     /** Prints i starting at the cursor location, and advances the
      *  cursor appropriately. */
     function void printInt(int i) {
+        return;
     }
 
     /** Advances the cursor to the beginning of the next line. */
     function void println() {
+        return;
     }
 
     /** Moves the cursor one column back. */
     function void backSpace() {
+        return;
     }
 }
