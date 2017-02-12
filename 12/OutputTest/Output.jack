@@ -230,13 +230,29 @@ class Output {
         var Array map;
         var int currentPixelAddress;
         var int pixelLineIndex;
+        var int wordPreviousValue;
+        var int wordNewValue;
 
-        let map = Output.getMap(c);
+        let map = Output.getMap(c);       
         let currentPixelAddress = currentCursorAddress;
+
         let pixelLineIndex = 0;
 
         while (pixelLineIndex < 11) {
-            do Memory.poke(currentPixelAddress, map[pixelLineIndex]);
+            let wordNewValue = map[pixelLineIndex];
+            let wordPreviousValue = Memory.peek(currentPixelAddress);
+
+            // If rightmost Char
+            if (currentCursorRightChar) {
+                let wordNewValue = wordNewValue * 256;
+                let wordNewValue = wordNewValue + Output.modulo(wordPreviousValue, 256);  // Add previous leftmost value
+            }
+
+            else {
+                let wordNewValue = wordNewValue + ((wordPreviousValue / 256) * 256);  // Add previous rightmost value
+            }
+
+            do Memory.poke(currentPixelAddress, wordNewValue);
             let pixelLineIndex = pixelLineIndex + 1;
             let currentPixelAddress = currentPixelAddress + PIXEL_LINE_WIDTH_IN_WORDS;
         }
@@ -265,5 +281,9 @@ class Output {
     /** Moves the cursor one column back. */
     function void backSpace() {
         return;
+    }
+
+    function int modulo(int value, int mod) {
+        return value - ((value / mod) * mod);
     }
 }
