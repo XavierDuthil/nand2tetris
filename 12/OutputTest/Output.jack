@@ -207,6 +207,14 @@ class Output {
             let i = i + 1;
         }
 
+        if (j < 0) {
+            let j = 0;
+        }
+
+        if (i < 0) {
+            let i = 0;
+        }
+
         // If i is superior to the lines count
         if ((i > TOTAL_TEXT_LINES) | (i = TOTAL_TEXT_LINES)) {
             let i = i - TOTAL_TEXT_LINES;
@@ -264,22 +272,53 @@ class Output {
     /** Prints s starting at the cursor location, and advances the
      *  cursor appropriately. */
     function void printString(String s) {
+        var int index;
+        let index = 0;
+
+        while (index < s.length()) {
+            do Output.printChar(s.charAt(index));
+            let index = index + 1;
+        }
+        
         return;
     }
 
     /** Prints i starting at the cursor location, and advances the
      *  cursor appropriately. */
-    function void printInt(int i) {
+    function void printInt(int number) {
+        var int magnitude, copyOfNumber;
+
+        if (number < 0) {
+            do Output.printChar(45);  // ASCII code for "-"
+            let number = -number;
+        }
+
+        let copyOfNumber = number;
+        let magnitude = 1;
+
+        while (copyOfNumber > 9) {
+            let copyOfNumber = copyOfNumber / 10;
+            let magnitude = magnitude * 10;
+        }
+
+        while (magnitude > 0) {
+            do Output.printChar((number / magnitude) + 48);
+            let number = number - ((number / magnitude) * magnitude);
+            let magnitude = magnitude / 10;
+        }
+
         return;
     }
 
     /** Advances the cursor to the beginning of the next line. */
     function void println() {
+        do Output.moveCursor(currentCursorLine + 1, 0);
         return;
     }
 
     /** Moves the cursor one column back. */
     function void backSpace() {
+        do Output.moveCursor(currentCursorLine, currentCursorColumn - 1);
         return;
     }
 
