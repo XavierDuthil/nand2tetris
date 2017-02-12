@@ -38,6 +38,7 @@ class Output {
         let PIXEL_LINE_WIDTH_IN_WORDS = TOTAL_TEXT_COLUMNS / 2;
 
         let currentCursorAddress = 16384;
+
         let currentCursorLine = 0;
         let currentCursorColumn = 0;
         let currentCursorRightChar = 0;
@@ -206,6 +207,11 @@ class Output {
             let i = i + 1;
         }
 
+        // If i is superior to the lines count
+        if ((i > TOTAL_TEXT_LINES) | (i = TOTAL_TEXT_LINES)) {
+            let i = i - TOTAL_TEXT_LINES;
+        }
+
         let verticalOffset = (LINE_HEIGHT_PX * (TOTAL_TEXT_COLUMNS / 2)) * i;
         let horizontalOffset = j / 2;
 
@@ -232,6 +238,7 @@ class Output {
         while (pixelLineIndex < 11) {
             do Memory.poke(currentPixelAddress, map[pixelLineIndex]);
             let pixelLineIndex = pixelLineIndex + 1;
+            let currentPixelAddress = currentPixelAddress + PIXEL_LINE_WIDTH_IN_WORDS;
         }
 
         do Output.moveCursor(currentCursorLine, currentCursorColumn + 1);
