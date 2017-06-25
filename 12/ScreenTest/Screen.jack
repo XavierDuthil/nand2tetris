@@ -7,34 +7,184 @@
  * Graphic screen library.
  */
 class Screen {
+    static int SCREEN_STARTING_ADDRESS;
+    static int PIXELS_PER_WORD;
+    static int WORDS_PER_LINE;
+    static int currentCursorAddress;
 
     /** Initializes the Screen. */
     function void init() {
+        let SCREEN_STARTING_ADDRESS = 16384;
+        let PIXELS_PER_WORD = 16;
+        let WORDS_PER_LINE = 32;
+
+        let currentCursorAddress = 16384;
+        return;
     }
 
     /** Erases the whole screen. */
     function void clearScreen() {
+        return;
     }
 
     /** Sets the color to be used in further draw commands
      *  where white = false, black = true. */
     function void setColor(boolean b) {
+        return;
     }
 
     /** Draws the (x, y) pixel. */
     function void drawPixel(int x, int y) {
+        var int memoryAddress, verticalOffset, horizontalOffset, remainder, value;
+
+        let verticalOffset = y * WORDS_PER_LINE;
+        let horizontalOffset = x / PIXELS_PER_WORD;
+        let remainder = x - (horizontalOffset * PIXELS_PER_WORD);
+        let memoryAddress = SCREEN_STARTING_ADDRESS + verticalOffset + horizontalOffset;
+
+        let value = Memory.peek(memoryAddress) | Screen.pow(2, remainder);
+        do Memory.poke(memoryAddress, value);
+        return;
     }
 
-    /** Draws a line from (x1, y1) to (x2, y2). */
-    function void drawLine(int x1, int y1, int x2, int y2) {
+    /** Draws a line from (initialX, initialY) to (finalX, finalY). */
+    function void drawLine(int initialX, int initialY, int finalX, int finalY) {
+        var int step, slope, currentX, currentY, tryX, tryY, bestX, bestY, tryDistance, bestDistance;
+
+        let currentX = initialX;
+        let currentY = initialY;
+        do Screen.drawPixel(currentX, currentY);
+
+        while(~(currentX = finalX) | ~(currentY = finalY)) {
+            // Try up
+            let tryX = currentX;
+            let tryY = currentY - 1;
+
+            let bestDistance = Math.abs(finalX - tryX) + Math.abs(finalY - tryY);
+            // do Output.printInt(bestDistance);
+            // do Output.printString(" ");
+            let bestX = tryX;
+            let bestY = tryY;
+
+            // Try down
+            let tryX = currentX;
+            let tryY = currentY + 1;
+
+            let tryDistance = Math.abs(finalX - tryX) + Math.abs(finalY - tryY);
+            // do Output.printInt(tryDistance);
+            // do Output.printString(" ");
+            if (tryDistance < bestDistance) {
+                let bestDistance = tryDistance;
+                let bestX = tryX;
+                let bestY = tryY;
+            }
+
+            // Try right
+            let tryX = currentX + 1;
+            let tryY = currentY;
+
+            let tryDistance = Math.abs(finalX - tryX) + Math.abs(finalY - tryY);
+            // do Output.printInt(tryDistance);
+            // do Output.printString(" ");
+            if (tryDistance < bestDistance) {
+                let bestDistance = tryDistance;
+                let bestX = tryX;
+                let bestY = tryY;
+            }
+
+            // Try left
+            let tryX = currentX - 1;
+            let tryY = currentY;
+
+            let tryDistance = Math.abs(finalX - tryX) + Math.abs(finalY - tryY);
+            // do Output.printInt(tryDistance);
+            // do Output.printString(" ");
+            if (tryDistance < bestDistance) {
+                let bestDistance = tryDistance;
+                let bestX = tryX;
+                let bestY = tryY;
+            }
+
+            do Screen.drawPixel(bestX, bestY);
+            let currentX = bestX;
+            let currentY = bestY;
+            // do Output.println();
+        }
+
+        /*// Case: vertical line
+        if (initialX = finalX) {
+            if ((finalY - initialY) > 0 ){
+                let step = 1;
+            } else {
+                let step = -1;
+            }
+
+            while (~(Math.abs(finalY - currentY) < 1)) {
+                do Screen.drawPixel(currentX, currentY);
+                let currentY = currentY + step;
+            }
+            return;
+        }
+
+        let slope = (finalY - initialY) / (finalX - initialX);
+
+        while (finalX - currentX > 0) {
+
+            do Screen.drawPixel(currentX, currentY);
+
+        }*/
+        return;
     }
 
     /** Draws a filled rectangle where the top left corner
-     *  is (x1, y1) and the bottom right corner is (x2, y2). */
-    function void drawRectangle(int x1, int y1, int x2, int y2) {
+     *  is (initialX, initialY) and the bottom right corner is (finalX, finalY). */
+    function void drawRectangle(int initialX, int initialY, int finalX, int finalY) {
+        return;
     }
 
     /** Draws a filled circle of radius r around (cx, cy). */
     function void drawCircle(int cx, int cy, int r) {
+        return;
+    }
+
+    function int modulo(int value, int mod) {
+        return value - ((value / mod) * mod);
+    }
+
+    function int pow(int base, int exponent) {
+        var int result;
+        let result = 1;
+
+        while (exponent > 0) {
+            let result = result * base;  
+            let exponent = exponent - 1;
+        }
+        return result;
+    }
+
+    function int round(double value) {
+        var int sign, result, intValue;
+
+        do Output.printInt(value);
+
+        if (value > 0.0 | value = 0.0) {
+            let sign = 1;
+        } else {
+            let sign = -1;
+        }
+
+        let intValue = value;  // Convert double to int ? Doesn't seem to work
+
+        do Output.printInt(intValue);
+        do Output.printInt(sign);
+
+        if (value > 0.0 | value = 0.0) {
+            if ((value - intValue) * sign < 0.5) { 
+                return intValue * sign;
+            }
+        }
+
+        // Add 1 to abs and re-apply sign
+        return ((intValue * sign) + 1) * sign;
     }
 }
