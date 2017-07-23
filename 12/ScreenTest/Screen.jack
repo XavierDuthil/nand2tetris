@@ -49,11 +49,72 @@ class Screen {
 
     /** Draws a line from (initialX, initialY) to (finalX, finalY). */
     function void drawLine(int initialX, int initialY, int finalX, int finalY) {
-        var int step, slope, currentX, currentY, tryX, tryY, bestX, bestY, tryDistance, bestDistance;
+        var int step, slope, currentX, currentY, tryX, tryY, bestX, bestY, tryDistance, bestDistance, deviation, horizontalDistanceCovered, verticalDistanceCovered, dx, dy;
 
         let currentX = initialX;
         let currentY = initialY;
-        do Screen.drawPixel(currentX, currentY);
+
+        if (initialX > finalX) {
+            do Screen.drawLine(finalX, finalY, initialX, initialY);
+            return;
+        }
+
+        // Case: Horizontal line
+        if (initialY = finalY) {
+            while (currentX < finalX) {
+                do Screen.drawPixel(currentX, currentY);
+                let currentX = currentX + 1;
+            }
+            return;
+        }
+
+        // Case: Vertical line
+        if (initialX = finalX) {
+            if (currentY < finalY) {
+                while (currentY < finalY) {
+                    do Screen.drawPixel(currentX, currentY);
+                    let currentY = currentY + 1;
+                }
+            }
+            else {
+                while (currentY > finalY) {
+                    do Screen.drawPixel(currentX, currentY);
+                    let currentY = currentY - 1;
+                }
+            }
+            return;
+        }
+
+        let dx = finalX - initialX;
+        let dy = finalY - initialY;
+
+        //draw diagonal line 
+        let deviation = 0;
+
+        if(initialY < finalY){
+
+            let horizontalDistanceCovered = 0;
+            let verticalDistanceCovered = 0;
+
+            //x++,y++
+            while(~(horizontalDistanceCovered > dx) & ~(verticalDistanceCovered > dy)){
+                
+                do Screen.drawPixel(initialX + horizontalDistanceCovered, initialY + verticalDistanceCovered);
+                
+                if(deviation > 0){
+                    let horizontalDistanceCovered = horizontalDistanceCovered + 1;
+                    let deviation = deviation - dx;
+                }else{
+                    let verticalDistanceCovered = verticalDistanceCovered + 1;
+                    let deviation = deviation + dy;
+                }
+
+            }
+        }
+        return;
+
+
+        /*do Screen.drawPixel(currentX, currentY);
 
         while(~(currentX = finalX) | ~(currentY = finalY)) {
             // Try up
@@ -110,30 +171,7 @@ class Screen {
             let currentY = bestY;
             // do Output.println();
         }
-
-        /*// Case: vertical line
-        if (initialX = finalX) {
-            if ((finalY - initialY) > 0 ){
-                let step = 1;
-            } else {
-                let step = -1;
-            }
-
-            while (~(Math.abs(finalY - currentY) < 1)) {
-                do Screen.drawPixel(currentX, currentY);
-                let currentY = currentY + step;
-            }
-            return;
-        }
-
-        let slope = (finalY - initialY) / (finalX - initialX);
-
-        while (finalX - currentX > 0) {
-
-            do Screen.drawPixel(currentX, currentY);
-
-        }*/
-        return;
+        return;*/
     }
 
     /** Draws a filled rectangle where the top left corner
