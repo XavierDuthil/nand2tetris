@@ -1,5 +1,6 @@
 # Nand2tetris
-An implementation by Sebastien Duthil and Xavier Duthil of the Nand2tetris course (http://nand2tetris.org), which consists in virtually building a computer running a tetris game, starting only from a NAND logic gate.
+An implementation by Sebastien Duthil and Xavier Duthil of the Nand2tetris course (http://nand2tetris.org), which consists in virtually building a computer running a tetris game, starting only from a NAND logic gate.  
+Our implementations of the assembler, compiler and the other translators (VM to ASM and Jack to VM) are in the form of Python scripts.  
 
 # Modules
 The course is divided into 12 modules, each representing a different layer of the final system:  
