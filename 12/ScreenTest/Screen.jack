@@ -90,88 +90,44 @@ class Screen {
 
         //draw diagonal line 
         let deviation = 0;
+        if (initialY < finalY) {
+            let horizontalDistanceCovered = 0;
+            let verticalDistanceCovered = 0;
 
-        if(initialY < finalY){
+            // x++, y++
+            while(horizontalDistanceCovered < dx | verticalDistanceCovered < dy){
+                do Screen.drawPixel(initialX + horizontalDistanceCovered, initialY + verticalDistanceCovered);
+                
+                if (deviation > 0) {
+                    let horizontalDistanceCovered = horizontalDistanceCovered + 1;
+                    let deviation = deviation - dy;
+                } else {
+                    let verticalDistanceCovered = verticalDistanceCovered + 1;
+                    let deviation = deviation + dx;
+                }
+            }
+        }
+
+        else {
+            let dy = -dy;
 
             let horizontalDistanceCovered = 0;
             let verticalDistanceCovered = 0;
 
-            //x++,y++
-            while(~(horizontalDistanceCovered > dx) & ~(verticalDistanceCovered > dy)){
+            // x++, y--
+            while (horizontalDistanceCovered < dx | verticalDistanceCovered < dy){
+                do Screen.drawPixel(initialX + horizontalDistanceCovered, initialY - verticalDistanceCovered);
                 
-                do Screen.drawPixel(initialX + horizontalDistanceCovered, initialY + verticalDistanceCovered);
-                
-                if(deviation > 0){
+                if (deviation < 0) {
                     let horizontalDistanceCovered = horizontalDistanceCovered + 1;
-                    let deviation = deviation - dx;
-                }else{
-                    let verticalDistanceCovered = verticalDistanceCovered + 1;
                     let deviation = deviation + dy;
+                } else {
+                    let verticalDistanceCovered = verticalDistanceCovered + 1;
+                    let deviation = deviation - dx;
                 }
-
             }
         }
         return;
-
-
-        /*do Screen.drawPixel(currentX, currentY);
-
-        while(~(currentX = finalX) | ~(currentY = finalY)) {
-            // Try up
-            let tryX = currentX;
-            let tryY = currentY - 1;
-
-            let bestDistance = Math.abs(finalX - tryX) + Math.abs(finalY - tryY);
-            // do Output.printInt(bestDistance);
-            // do Output.printString(" ");
-            let bestX = tryX;
-            let bestY = tryY;
-
-            // Try down
-            let tryX = currentX;
-            let tryY = currentY + 1;
-
-            let tryDistance = Math.abs(finalX - tryX) + Math.abs(finalY - tryY);
-            // do Output.printInt(tryDistance);
-            // do Output.printString(" ");
-            if (tryDistance < bestDistance) {
-                let bestDistance = tryDistance;
-                let bestX = tryX;
-                let bestY = tryY;
-            }
-
-            // Try right
-            let tryX = currentX + 1;
-            let tryY = currentY;
-
-            let tryDistance = Math.abs(finalX - tryX) + Math.abs(finalY - tryY);
-            // do Output.printInt(tryDistance);
-            // do Output.printString(" ");
-            if (tryDistance < bestDistance) {
-                let bestDistance = tryDistance;
-                let bestX = tryX;
-                let bestY = tryY;
-            }
-
-            // Try left
-            let tryX = currentX - 1;
-            let tryY = currentY;
-
-            let tryDistance = Math.abs(finalX - tryX) + Math.abs(finalY - tryY);
-            // do Output.printInt(tryDistance);
-            // do Output.printString(" ");
-            if (tryDistance < bestDistance) {
-                let bestDistance = tryDistance;
-                let bestX = tryX;
-                let bestY = tryY;
-            }
-
-            do Screen.drawPixel(bestX, bestY);
-            let currentX = bestX;
-            let currentY = bestY;
-            // do Output.println();
-        }
-        return;*/
     }
 
     /** Draws a filled rectangle where the top left corner
