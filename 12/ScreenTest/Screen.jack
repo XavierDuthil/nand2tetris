@@ -11,6 +11,7 @@ class Screen {
     static int PIXELS_PER_WORD;
     static int WORDS_PER_LINE;
     static int currentCursorAddress;
+    static boolean drawInBlack;
 
     /** Initializes the Screen. */
     function void init() {
@@ -19,6 +20,7 @@ class Screen {
         let WORDS_PER_LINE = 32;
 
         let currentCursorAddress = 16384;
+        let drawInBlack = true;
         return;
     }
 
@@ -30,6 +32,7 @@ class Screen {
     /** Sets the color to be used in further draw commands
      *  where white = false, black = true. */
     function void setColor(boolean b) {
+        let drawInBlack = b;
         return;
     }
 
@@ -42,7 +45,12 @@ class Screen {
         let remainder = x - (horizontalOffset * PIXELS_PER_WORD);
         let memoryAddress = SCREEN_STARTING_ADDRESS + verticalOffset + horizontalOffset;
 
-        let value = Memory.peek(memoryAddress) | Screen.pow(2, remainder);
+        if (drawInBlack) {
+            let value = Memory.peek(memoryAddress) | Screen.pow(2, remainder);
+        } else {
+            let value = Memory.peek(memoryAddress) & (~(Screen.pow(2, remainder)));
+        }
+
         do Memory.poke(memoryAddress, value);
         return;
     }
