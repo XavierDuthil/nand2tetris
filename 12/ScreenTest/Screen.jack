@@ -133,16 +133,25 @@ class Screen {
     /** Draws a filled rectangle where the top left corner
      *  is (initialX, initialY) and the bottom right corner is (finalX, finalY). */
     function void drawRectangle(int initialX, int initialY, int finalX, int finalY) {
+        var int currentX, currentY;
+        let currentX = initialX;
+        let currentY = initialY;
+
+        while (currentX < finalX) {
+            while (currentY < finalY) {
+                do Screen.drawPixel(currentX, currentY);
+                let currentY = currentY + 1;
+            }
+            let currentY = initialY;
+            let currentX = currentX + 1;
+        }
+
         return;
     }
 
     /** Draws a filled circle of radius r around (cx, cy). */
     function void drawCircle(int cx, int cy, int r) {
         return;
-    }
-
-    function int modulo(int value, int mod) {
-        return value - ((value / mod) * mod);
     }
 
     function int pow(int base, int exponent) {
@@ -154,31 +163,5 @@ class Screen {
             let exponent = exponent - 1;
         }
         return result;
-    }
-
-    function int round(double value) {
-        var int sign, result, intValue;
-
-        do Output.printInt(value);
-
-        if (value > 0.0 | value = 0.0) {
-            let sign = 1;
-        } else {
-            let sign = -1;
-        }
-
-        let intValue = value;  // Convert double to int ? Doesn't seem to work
-
-        do Output.printInt(intValue);
-        do Output.printInt(sign);
-
-        if (value > 0.0 | value = 0.0) {
-            if ((value - intValue) * sign < 0.5) { 
-                return intValue * sign;
-            }
-        }
-
-        // Add 1 to abs and re-apply sign
-        return ((intValue * sign) + 1) * sign;
     }
 }
