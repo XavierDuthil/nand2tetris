@@ -158,7 +158,46 @@ class Screen {
     }
 
     /** Draws a filled circle of radius r around (cx, cy). */
-    function void drawCircle(int cx, int cy, int r) {
+    /* We used https://stackoverflow.com/a/14976268 */
+    function void drawCircle(int centerX, int centerY, int radius) {
+        var int x, y, xChange, yChange, radiusError, i;
+        let x = radius;
+        let y = 0;
+        let xChange = 1 - (radius * 2);
+        let yChange = 0;
+        let radiusError = 0;
+
+        while ((x > y) | (x = y))
+        {
+            do Output.printInt(0);
+
+            let i = centerX - x;
+            while ((i < (centerX + x)) | (i = (centerX + x)))
+            {
+                do Screen.drawPixel(i, centerY + y);
+                do Screen.drawPixel(i, centerY - y);
+                let i = i + 1;
+            }
+
+            let i = centerX - y;
+            while ((i < (centerX + y)) | (i = (centerX + y)))
+            {
+                do Screen.drawPixel(i, centerY + x);
+                do Screen.drawPixel(i, centerY - x);
+                let i = i + 1;
+            }
+
+            let y = y + 1;
+            let radiusError = radiusError + yChange;
+            let yChange = yChange + 2;
+            if (((radiusError * 2) + xChange) > 0)
+            {
+                let i = i - 1;
+                let radiusError = radiusError + xChange;
+                let xChange = xChange + 2;
+            }
+        }
+
         return;
     }
 
