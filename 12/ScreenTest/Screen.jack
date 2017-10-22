@@ -167,10 +167,8 @@ class Screen {
         let yChange = 0;
         let radiusError = 0;
 
-        while ((x > y) | (x = y))
+        while (x > y)
         {
-            do Output.printInt(0);
-
             let i = centerX - x;
             while ((i < (centerX + x)) | (i = (centerX + x)))
             {
@@ -192,7 +190,7 @@ class Screen {
             let yChange = yChange + 2;
             if (((radiusError * 2) + xChange) > 0)
             {
-                let i = i - 1;
+                let x = x - 1;
                 let radiusError = radiusError + xChange;
                 let xChange = xChange + 2;
             }
