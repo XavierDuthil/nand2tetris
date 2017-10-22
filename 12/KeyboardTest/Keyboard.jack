@@ -3,13 +3,19 @@
 // by Nisan and Schocken, MIT Press.
 // File name: projects/12/Keyboard.jack
 
+
 /**
  * A library for handling user input from the keyboard.
  */
 class Keyboard {
+    static int KEYBOARD_REGISTER;
+    static int lastKeyPressed;
 
     /** Initializes the keyboard. */
     function void init() {
+        let KEYBOARD_REGISTER = 24576;
+        let lastKeyPressed = 0;
+        return;
     } 
 
     /**
@@ -33,6 +39,15 @@ class Keyboard {
      * F1 - F12 = 141 - 152
      */
     function char keyPressed() {
+        var int key;
+        let key = Memory.peek(KEYBOARD_REGISTER);
+        if (~(key = lastKeyPressed)) {
+            let lastKeyPressed = key;
+            return key;
+        }
+        else {
+            return 0;
+        }
     }
 
     /**								
@@ -41,6 +56,7 @@ class Keyboard {
      * the key to the screen, and returns the value of the pressed key.
      */
     function char readChar() {
+        return 0;
     }
 
     /**								
@@ -48,6 +64,7 @@ class Keyboard {
      * (until a newline character) from the keyboard, and returns its value.
      */
     function String readLine(String message) {
+        return "";
     }   
 
     /**								
@@ -56,5 +73,6 @@ class Keyboard {
      * integer value (until the first non numeric character).
      */
     function int readInt(String message) {
+        return "";
     }
 }
