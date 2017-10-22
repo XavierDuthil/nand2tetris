@@ -56,7 +56,21 @@ class Keyboard {
      * the key to the screen, and returns the value of the pressed key.
      */
     function char readChar() {
-        return 0;
+        var int key, result;
+
+        // Wait for input
+        while (key = 0) {
+            let key = Keyboard.keyPressed();
+        }
+        let result = key;
+
+        // Wait for key release
+        while (~(key = 0)) {
+            let key = Keyboard.keyPressed();
+        }
+
+        do Output.printChar(result);
+        return result;
     }
 
     /**								
