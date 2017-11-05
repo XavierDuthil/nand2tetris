@@ -98,7 +98,7 @@ class Keyboard {
         }
 
         return inputString;
-    }   
+    }
 
     /**								
      * Prints the message on the screen, reads the next line
@@ -106,6 +106,8 @@ class Keyboard {
      * integer value (until the first non numeric character).
      */
     function int readInt(String message) {
-        return "";
+        var String inputString;
+        let inputString = Keyboard.readLine(message);
+        return inputString.intValue();
     }
 }
