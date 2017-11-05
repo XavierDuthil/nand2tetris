@@ -78,7 +78,26 @@ class Keyboard {
      * (until a newline character) from the keyboard, and returns its value.
      */
     function String readLine(String message) {
-        return "";
+        var char inputChar;
+        var String inputString;
+
+        do Output.printString(message);
+        let inputString = String.new(256); 
+
+        while (~(inputChar = String.newLine())) {
+            let inputChar = Keyboard.readChar();
+
+            if (inputChar = String.backSpace()) {
+                do inputString.eraseLastChar();
+            }
+            else {
+                if (~(inputChar = String.newLine())) {
+                    do inputString.appendChar(inputChar);
+                }
+            }
+        }
+
+        return inputString;
     }   
 
     /**								
